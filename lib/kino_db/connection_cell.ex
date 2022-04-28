@@ -17,7 +17,7 @@ defmodule KinoDB.ConnectionCell do
     fields = %{
       "variable" => Kino.SmartCell.prefixed_var_name("conn", attrs["variable"]),
       "type" => attrs["type"] || default_type,
-      "hostname" => attrs["hostname"] || "",
+      "hostname" => attrs["hostname"] || "localhost",
       "port" => attrs["port"] || default_port,
       "username" => attrs["username"] || "",
       "password" => attrs["password"] || "",

@@ -13,7 +13,7 @@ defmodule KinoDB.ConnectionCellTest do
 
       assert source ==
                """
-               opts = [hostname: "", port: 5432, username: "", password: "", database: ""]
+               opts = [hostname: "localhost", port: 5432, username: "", password: "", database: ""]
                {:ok, conn} = Kino.start_child({Postgrex, opts})\
                """
     end
@@ -49,12 +49,12 @@ defmodule KinoDB.ConnectionCellTest do
   test "when a field changes, broadcasts the change and sends source update" do
     {kino, _source} = start_smart_cell!(ConnectionCell, %{"variable" => "conn"})
 
-    push_event(kino, "update_field", %{"field" => "hostname", "value" => "localhost"})
+    push_event(kino, "update_field", %{"field" => "hostname", "value" => "myhost"})
 
-    assert_broadcast_event(kino, "update", %{"fields" => %{"hostname" => "localhost"}})
+    assert_broadcast_event(kino, "update", %{"fields" => %{"hostname" => "myhost"}})
 
-    assert_smart_cell_update(kino, %{"hostname" => "localhost"}, """
-    opts = [hostname: "localhost", port: 5432, username: "", password: "", database: ""]
+    assert_smart_cell_update(kino, %{"hostname" => "myhost"}, """
+    opts = [hostname: "myhost", port: 5432, username: "", password: "", database: ""]
     {:ok, conn} = Kino.start_child({Postgrex, opts})\
     """)
   end
@@ -80,7 +80,7 @@ defmodule KinoDB.ConnectionCellTest do
     assert_broadcast_event(kino, "update", %{"fields" => %{"type" => "mysql", "port" => 3306}})
 
     assert_smart_cell_update(kino, %{"type" => "mysql", "port" => 3306}, """
-    opts = [hostname: "", port: 3306, username: "", password: "", database: ""]
+    opts = [hostname: "localhost", port: 3306, username: "", password: "", database: ""]
     {:ok, conn} = Kino.start_child({MyXQL, opts})\
     """)
   end
