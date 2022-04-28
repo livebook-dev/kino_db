@@ -1,0 +1,16 @@
+# Components
+
+```elixir
+Mix.install([
+  # {:postgrex, "~> 0.16.3"},
+  # {:myxql, "~> 0.6.2"},
+  {:kino_db, path: "~/_/kino_db"}
+])
+```
+
+## Smart cells
+
+The following Smart cells are available:
+
+* **Database connection** - for establishing a connection to a
+* **SQL query** - for querying a database
