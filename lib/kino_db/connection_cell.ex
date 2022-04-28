@@ -131,13 +131,13 @@ defmodule KinoDB.ConnectionCell do
 
   defp missing_dep(%{"type" => "postgres"}) do
     unless Code.ensure_loaded?(Postgrex) do
-      ~s/{:postgrex, "~> 0.16.1"}/
+      ~s/{:postgrex, "~> 0.16.3"}/
     end
   end
 
   defp missing_dep(%{"type" => "mysql"}) do
     unless Code.ensure_loaded?(MyXQL) do
-      ~s/{:myxql, "~> 0.6.1"}/
+      ~s/{:myxql, "~> 0.6.2"}/
     end
   end
 
