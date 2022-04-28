@@ -1,7 +1,7 @@
 defmodule KinoDB.ConnectionCellTest do
   use ExUnit.Case, async: true
 
-  import KinoTest
+  import Kino.Test
 
   alias KinoDB.ConnectionCell
 

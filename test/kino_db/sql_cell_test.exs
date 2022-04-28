@@ -1,7 +1,7 @@
 defmodule KinoDB.SQLCellTest do
   use ExUnit.Case, async: true
 
-  import KinoTest
+  import Kino.Test
 
   alias KinoDB.SQLCell
 
