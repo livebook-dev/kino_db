@@ -12,5 +12,5 @@ Mix.install([
 
 The following Smart cells are available:
 
-* **Database connection** - for establishing a connection to a
+* **Database connection** - for establishing a connection to a database
 * **SQL query** - for querying a database
