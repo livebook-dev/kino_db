@@ -143,7 +143,7 @@ defmodule KinoDB.SQLCell do
   end
 
   defp to_quoted(%{"connection" => %{"type" => "sqlite"}} = attrs) do
-    to_quoted(attrs, quote(do: Exqlite.Sqlite3), fn _n -> "?" end)
+    to_quoted(attrs, quote(do: Exqlite.Sqlite3), fn n -> "?#{n}" end)
   end
 
   defp to_quoted(_ctx) do
@@ -167,21 +167,42 @@ defmodule KinoDB.SQLCell do
            "result_variable" => result_variable
          },
          query,
-         _params,
+         params,
          _opts_args
        ) do
-    quote do
-      {:ok, statement} =
-        unquote(quoted_module).prepare(
-          unquote(quoted_var(variable)),
-          unquote(quoted_query(query))
-        )
+    statement_block =
+      quote do
+        {:ok, statement} =
+          unquote(quoted_module).prepare(
+            unquote(quoted_var(variable)),
+            unquote(quoted_query(query))
+          )
+      end
 
-      unquote(quoted_var(result_variable)) =
-        unquote(quoted_module).step(
-          unquote(quoted_var(variable)),
-          statement
-        )
+    bind_block = quote do: unquote(maybe_bind_parameters(variable, params))
+
+    result_block =
+      quote do
+        unquote(quoted_var(result_variable)) =
+          unquote(quoted_module).step(
+            unquote(quoted_var(variable)),
+            statement
+          )
+      end
+
+    if params == [] do
+      quote do
+        unquote(statement_block)
+        unquote(result_block)
+      end
+    else
+      bind_block = quote do: unquote(maybe_bind_parameters(variable, params))
+
+      quote do
+        unquote(statement_block)
+        unquote_splicing(bind_block)
+        unquote(result_block)
+      end
     end
   end
 
@@ -194,6 +215,22 @@ defmodule KinoDB.SQLCell do
           unquote(params),
           unquote_splicing(opts_args)
         )
+    end
+  end
+
+  defp maybe_bind_parameters(conn_variable, []) do
+  end
+
+  defp maybe_bind_parameters(conn_variable, params) do
+    for param <- params do
+      quote do
+        :ok =
+          Exqlite.Sqlite3.bind(
+            unquote(quoted_var(conn_variable)),
+            unquote(quoted_var("statement")),
+            [unquote(param)]
+          )
+      end
     end
   end
 

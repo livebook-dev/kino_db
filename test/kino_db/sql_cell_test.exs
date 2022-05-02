@@ -154,8 +154,10 @@ defmodule KinoDB.SQLCellTest do
 
       assert SQLCell.to_source(put_in(attrs["connection"]["type"], "sqlite")) == ~s'''
              {:ok, statement} =
-               Exqlite.Sqlite3.prepare(conn, "SELECT id FROM users WHERE id ? AND name LIKE ?")
+               Exqlite.Sqlite3.prepare(conn, "SELECT id FROM users WHERE id ?1 AND name LIKE ?2")
 
+             :ok = Exqlite.Sqlite3.bind(conn, statement, [user_id])
+             :ok = Exqlite.Sqlite3.bind(conn, statement, [search <> "%"])
              result = Exqlite.Sqlite3.step(conn, statement)\
              '''
     end
@@ -203,9 +205,10 @@ defmodule KinoDB.SQLCellTest do
                Exqlite.Sqlite3.prepare(conn, """
                SELECT id from users
                -- WHERE id = {{user_id1}}
-               /* WHERE id = {{user_id2}} */ WHERE id = ?
+               /* WHERE id = {{user_id2}} */ WHERE id = ?1
                """)
 
+             :ok = Exqlite.Sqlite3.bind(conn, statement, [user_id3])
              result = Exqlite.Sqlite3.step(conn, statement)\
              '''
     end
