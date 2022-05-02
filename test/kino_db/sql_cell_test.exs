@@ -78,6 +78,11 @@ defmodule KinoDB.SQLCellTest do
       assert SQLCell.to_source(put_in(attrs["connection"]["type"], "mysql")) == """
              result = MyXQL.query!(conn, "SELECT id FROM users", [])\
              """
+
+      assert SQLCell.to_source(put_in(attrs["connection"]["type"], "sqlite")) == """
+             {:ok, statement} = Exqlite.Sqlite3.prepare(conn, "SELECT id FROM users")
+             result = Exqlite.Sqlite3.step(conn, statement)\
+             """
     end
 
     test "uses heredoc string for a multi-line query" do
@@ -111,6 +116,16 @@ defmodule KinoDB.SQLCellTest do
                  []
                )\
              '''
+
+      assert SQLCell.to_source(put_in(attrs["connection"]["type"], "sqlite")) == ~s'''
+             {:ok, statement} =
+               Exqlite.Sqlite3.prepare(conn, """
+               SELECT id FROM users
+               WHERE last_name = 'Sherlock'
+               """)
+
+             result = Exqlite.Sqlite3.step(conn, statement)\
+             '''
     end
 
     test "parses parameter expressions" do
@@ -135,6 +150,13 @@ defmodule KinoDB.SQLCellTest do
                  user_id,
                  search <> "%"
                ])\
+             '''
+
+      assert SQLCell.to_source(put_in(attrs["connection"]["type"], "sqlite")) == ~s'''
+             {:ok, statement} =
+               Exqlite.Sqlite3.prepare(conn, "SELECT id FROM users WHERE id ? AND name LIKE ?")
+
+             result = Exqlite.Sqlite3.step(conn, statement)\
              '''
     end
 
@@ -175,6 +197,17 @@ defmodule KinoDB.SQLCellTest do
                  [user_id3]
                )\
              '''
+
+      assert SQLCell.to_source(put_in(attrs["connection"]["type"], "sqlite")) == ~s'''
+             {:ok, statement} =
+               Exqlite.Sqlite3.prepare(conn, """
+               SELECT id from users
+               -- WHERE id = {{user_id1}}
+               /* WHERE id = {{user_id2}} */ WHERE id = ?
+               """)
+
+             result = Exqlite.Sqlite3.step(conn, statement)\
+             '''
     end
 
     test "passes timeout option when a timeout is specified" do
@@ -191,6 +224,11 @@ defmodule KinoDB.SQLCellTest do
 
       assert SQLCell.to_source(put_in(attrs["connection"]["type"], "mysql")) == """
              result = MyXQL.query!(conn, "SELECT id FROM users", [], timeout: 30000)\
+             """
+
+      assert SQLCell.to_source(put_in(attrs["connection"]["type"], "sqlite")) == """
+             {:ok, statement} = Exqlite.Sqlite3.prepare(conn, "SELECT id FROM users")
+             result = Exqlite.Sqlite3.step(conn, statement)\
              """
     end
   end

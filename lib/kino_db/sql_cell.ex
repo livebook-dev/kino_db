@@ -103,11 +103,16 @@ defmodule KinoDB.SQLCell do
       case Atom.to_string(module) do
         "Elixir.Postgrex" <> _ -> "postgres"
         "Elixir.MyXQL" <> _ -> "mysql"
+        "Elixir.Exqlite" <> _ -> "sqlite"
         _ -> nil
       end
     else
       _ -> nil
     end
+  end
+
+  defp connection_type(%module{}) when module == Exqlite.Connection do
+    "sqlite"
   end
 
   defp connection_type(_connection), do: nil
@@ -137,6 +142,10 @@ defmodule KinoDB.SQLCell do
     to_quoted(attrs, quote(do: MyXQL), fn _n -> "?" end)
   end
 
+  defp to_quoted(%{"connection" => %{"type" => "sqlite"}} = attrs) do
+    to_quoted(attrs, quote(do: Exqlite.Sqlite3), fn _n -> "?" end)
+  end
+
   defp to_quoted(_ctx) do
     quote do
     end
@@ -146,6 +155,37 @@ defmodule KinoDB.SQLCell do
     {query, params} = parameterize(attrs["query"], next)
     opts_args = query_opts_args(attrs)
 
+    quote do
+      unquote(quoted_function(quoted_module, attrs, query, params, opts_args))
+    end
+  end
+
+  defp quoted_function(
+         quoted_module,
+         %{
+           "connection" => %{"type" => "sqlite", "variable" => variable},
+           "result_variable" => result_variable
+         },
+         query,
+         _params,
+         _opts_args
+       ) do
+    quote do
+      {:ok, statement} =
+        unquote(quoted_module).prepare(
+          unquote(quoted_var(variable)),
+          unquote(quoted_query(query))
+        )
+
+      unquote(quoted_var(result_variable)) =
+        unquote(quoted_module).step(
+          unquote(quoted_var(variable)),
+          statement
+        )
+    end
+  end
+
+  defp quoted_function(quoted_module, attrs, query, params, opts_args) do
     quote do
       unquote(quoted_var(attrs["result_variable"])) =
         unquote(quoted_module).query!(
