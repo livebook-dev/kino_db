@@ -11,20 +11,34 @@ defmodule KinoDB.ConnectionCell do
 
   @impl true
   def init(attrs, ctx) do
-    default_type = default_db_type()
-    default_port = @default_port_by_type[default_type]
+    type = attrs["type"] || default_db_type()
 
-    fields = %{
-      "variable" => Kino.SmartCell.prefixed_var_name("conn", attrs["variable"]),
-      "type" => attrs["type"] || default_type,
+    fields =
+      Map.merge(fields(type, attrs), %{
+        "variable" => Kino.SmartCell.prefixed_var_name("conn", attrs["variable"])
+      })
+
+    {:ok, assign(ctx, fields: fields, missing_dep: missing_dep(fields))}
+  end
+
+  defp fields("sqlite", attrs) do
+    %{
+      "type" => "sqlite",
+      "path" => attrs["path"] || ""
+    }
+  end
+
+  defp fields(type, attrs) do
+    default_port = @default_port_by_type[type]
+
+    %{
+      "type" => type,
       "hostname" => attrs["hostname"] || "localhost",
       "port" => attrs["port"] || default_port,
       "username" => attrs["username"] || "",
       "password" => attrs["password"] || "",
       "database" => attrs["database"] || ""
     }
-
-    {:ok, assign(ctx, fields: fields, missing_dep: missing_dep(fields))}
   end
 
   @impl true
@@ -99,32 +113,65 @@ defmodule KinoDB.ConnectionCell do
     to_quoted(attrs, quote(do: MyXQL))
   end
 
+  defp to_quoted(%{"type" => "sqlite"} = attrs) do
+    to_quoted(attrs, quote(do: Exqlite.Connection))
+  end
+
   defp to_quoted(_ctx) do
     quote do
     end
   end
 
   defp to_quoted(attrs, quoted_module) do
+    opts = opts_by_type(attrs["type"], attrs)
+
     quote do
-      opts = [
+      opts = unquote(opts)
+
+      {:ok, unquote(quoted_var(attrs))} = unquote(connect(attrs, quoted_module))
+    end
+  end
+
+  defp connect(%{"type" => "sqlite"}, quoted_module) do
+    quote do
+      unquote(quoted_module).connect(opts)
+    end
+  end
+
+  defp connect(_attrs, quoted_module) do
+    quote do
+      Kino.start_child({unquote(quoted_module), opts})
+    end
+  end
+
+  defp opts_by_type("sqlite", attrs) do
+    quote do
+      [database: unquote(attrs["path"])]
+    end
+  end
+
+  defp opts_by_type(_, attrs) do
+    quote do
+      [
         hostname: unquote(attrs["hostname"]),
         port: unquote(attrs["port"]),
         username: unquote(attrs["username"]),
         password: unquote(attrs["password"]),
         database: unquote(attrs["database"])
       ]
-
-      {:ok, unquote(quoted_var(attrs["variable"]))} =
-        Kino.start_child({unquote(quoted_module), opts})
     end
   end
 
-  defp quoted_var(string), do: {String.to_atom(string), [], nil}
+  defp quoted_var(%{"type" => "sqlite", "variable" => string}),
+    do: {String.to_atom("%{db: #{string}}"), [], nil}
+
+  defp quoted_var(%{"type" => _, "variable" => string}), do: {String.to_atom(string), [], nil}
 
   defp default_db_type() do
     cond do
       Code.ensure_loaded?(Postgrex) -> "postgres"
       Code.ensure_loaded?(MyXQL) -> "mysql"
+      Code.ensure_loaded?(Exqlite) -> "sqlite"
       true -> "postgres"
     end
   end
@@ -138,6 +185,12 @@ defmodule KinoDB.ConnectionCell do
   defp missing_dep(%{"type" => "mysql"}) do
     unless Code.ensure_loaded?(MyXQL) do
       ~s/{:myxql, "~> 0.6.2"}/
+    end
+  end
+
+  defp missing_dep(%{"type" => "sqlite"}) do
+    unless Code.ensure_loaded?(Exqlite) do
+      ~s/{:exqlite, "~> 0.10.3"}/
     end
   end
 
