@@ -81,11 +81,7 @@ defmodule KinoDB.SQLCell do
 
   @impl true
   def handle_info({:connections, connections}, ctx) do
-    connection =
-      case {connections, ctx.assigns.connection} do
-        {[connection | _], nil} -> connection
-        {_connections, connection} -> connection
-      end
+    connection = search_connection(connections, ctx.assigns.connection)
 
     broadcast_event(ctx, "connections", %{
       "connections" => connections,
@@ -93,6 +89,17 @@ defmodule KinoDB.SQLCell do
     })
 
     {:noreply, assign(ctx, connections: connections, connection: connection)}
+  end
+
+  defp search_connection([connection | _], nil), do: connection
+
+  defp search_connection([], connection), do: connection
+
+  defp search_connection(connections, %{type: type} = connection) do
+    case Enum.find(connections, &(&1.type == type)) do
+      nil -> List.first(connections)
+      ^connection -> connection
+    end
   end
 
   @compile {:no_warn_undefined, {DBConnection, :connection_module, 1}}
