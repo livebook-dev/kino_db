@@ -57,7 +57,7 @@ defmodule KinoDB.ConnectionCellTest do
       assert source ==
                """
                opts = [database: "/path/to/sqlite3.db"]
-               {:ok, %{db: db}} = Exqlite.Connection.connect(opts)\
+               {:ok, db} = Kino.start_child({Exqlite, opts})\
                """
     end
   end
