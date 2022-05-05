@@ -13,20 +13,20 @@ defmodule KinoDB.ConnectionCell do
   def init(attrs, ctx) do
     type = attrs["type"] || default_db_type()
 
-    fields =
-      Map.merge(fields(type, attrs), %{
-        "variable" => Kino.SmartCell.prefixed_var_name("conn", attrs["variable"]),
-        "type" => type
-      })
+    fields = %{
+      "variable" => Kino.SmartCell.prefixed_var_name("conn", attrs["variable"]),
+      "type" => type,
+      "connection_data" => connection_data(type, attrs)
+    }
 
     {:ok, assign(ctx, fields: fields, missing_dep: missing_dep(fields))}
   end
 
-  defp fields("sqlite", attrs) do
-    %{"path" => attrs["path"] || ""}
+  defp connection_data("sqlite", attrs) do
+    %{"database_path" => attrs["database_path"] || ""}
   end
 
-  defp fields(type, attrs) do
+  defp connection_data(type, attrs) do
     default_port = @default_port_by_type[type]
 
     %{
@@ -93,9 +93,18 @@ defmodule KinoDB.ConnectionCell do
 
   defp to_updates(_fields, field, value), do: %{field => value}
 
+  @default_keys ["type", "variable"]
+
   @impl true
-  def to_attrs(ctx) do
-    ctx.assigns.fields
+  def to_attrs(%{assigns: %{fields: fields}}) do
+    case fields["type"] do
+      "sqlite" ->
+        Map.take(fields, @default_keys ++ ["database_path"])
+
+      type when type in ["postgres", "mysql"] ->
+        keys = ~w|database hostname port username password|
+        Map.take(fields, @default_keys ++ keys)
+    end
   end
 
   @impl true
@@ -103,41 +112,31 @@ defmodule KinoDB.ConnectionCell do
     attrs |> to_quoted() |> Kino.SmartCell.quoted_to_string()
   end
 
+  defp to_quoted(%{"type" => "sqlite"} = attrs) do
+    quote do
+      opts = [database: unquote(attrs["database_path"])]
+
+      {:ok, unquote(quoted_var(attrs["variable"]))} = Kino.start_child({Exqlite, opts})
+    end
+  end
+
   defp to_quoted(%{"type" => "postgres"} = attrs) do
-    to_quoted(attrs, quote(do: Postgrex))
+    quote do
+      opts = unquote(shared_options(attrs))
+
+      {:ok, unquote(quoted_var(attrs["variable"]))} = Kino.start_child({Postgrex, opts})
+    end
   end
 
   defp to_quoted(%{"type" => "mysql"} = attrs) do
-    to_quoted(attrs, quote(do: MyXQL))
-  end
-
-  defp to_quoted(%{"type" => "sqlite"} = attrs) do
-    to_quoted(attrs, quote(do: Exqlite))
-  end
-
-  defp to_quoted(_ctx) do
     quote do
+      opts = unquote(shared_options(attrs))
+
+      {:ok, unquote(quoted_var(attrs["variable"]))} = Kino.start_child({MyXQL, opts})
     end
   end
 
-  defp to_quoted(attrs, quoted_module) do
-    opts = opts_by_type(attrs["type"], attrs)
-
-    quote do
-      opts = unquote(opts)
-
-      {:ok, unquote(quoted_var(attrs["variable"]))} =
-        Kino.start_child({unquote(quoted_module), opts})
-    end
-  end
-
-  defp opts_by_type("sqlite", attrs) do
-    quote do
-      [database: unquote(attrs["path"])]
-    end
-  end
-
-  defp opts_by_type(_, attrs) do
+  defp shared_options(attrs) do
     quote do
       [
         hostname: unquote(attrs["hostname"]),
