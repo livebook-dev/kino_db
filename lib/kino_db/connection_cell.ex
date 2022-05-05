@@ -15,17 +15,15 @@ defmodule KinoDB.ConnectionCell do
 
     fields =
       Map.merge(fields(type, attrs), %{
-        "variable" => Kino.SmartCell.prefixed_var_name("conn", attrs["variable"])
+        "variable" => Kino.SmartCell.prefixed_var_name("conn", attrs["variable"]),
+        "type" => type
       })
 
     {:ok, assign(ctx, fields: fields, missing_dep: missing_dep(fields))}
   end
 
   defp fields("sqlite", attrs) do
-    %{
-      "type" => "sqlite",
-      "path" => attrs["path"] || ""
-    }
+    %{"path" => attrs["path"] || ""}
   end
 
   defp fields(type, attrs) do
@@ -114,7 +112,7 @@ defmodule KinoDB.ConnectionCell do
   end
 
   defp to_quoted(%{"type" => "sqlite"} = attrs) do
-    to_quoted(attrs, quote(do: Exqlite.Connection))
+    to_quoted(attrs, quote(do: Exqlite))
   end
 
   defp to_quoted(_ctx) do
@@ -128,19 +126,8 @@ defmodule KinoDB.ConnectionCell do
     quote do
       opts = unquote(opts)
 
-      {:ok, unquote(quoted_var(attrs))} = unquote(connect(attrs, quoted_module))
-    end
-  end
-
-  defp connect(%{"type" => "sqlite"}, quoted_module) do
-    quote do
-      unquote(quoted_module).connect(opts)
-    end
-  end
-
-  defp connect(_attrs, quoted_module) do
-    quote do
-      Kino.start_child({unquote(quoted_module), opts})
+      {:ok, unquote(quoted_var(attrs["variable"]))} =
+        Kino.start_child({unquote(quoted_module), opts})
     end
   end
 
@@ -162,10 +149,7 @@ defmodule KinoDB.ConnectionCell do
     end
   end
 
-  defp quoted_var(%{"type" => "sqlite", "variable" => string}),
-    do: {String.to_atom("%{db: #{string}}"), [], nil}
-
-  defp quoted_var(%{"type" => _, "variable" => string}), do: {String.to_atom(string), [], nil}
+  defp quoted_var(string), do: {String.to_atom(string), [], nil}
 
   defp default_db_type() do
     cond do
@@ -190,7 +174,7 @@ defmodule KinoDB.ConnectionCell do
 
   defp missing_dep(%{"type" => "sqlite"}) do
     unless Code.ensure_loaded?(Exqlite) do
-      ~s/{:exqlite, "~> 0.10.3"}/
+      ~s/{:exqlite, "~> 0.11.0"}/
     end
   end
 
