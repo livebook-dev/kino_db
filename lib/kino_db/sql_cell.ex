@@ -81,11 +81,7 @@ defmodule KinoDB.SQLCell do
 
   @impl true
   def handle_info({:connections, connections}, ctx) do
-    connection =
-      case {connections, ctx.assigns.connection} do
-        {[connection | _], nil} -> connection
-        {_connections, connection} -> connection
-      end
+    connection = search_connection(connections, ctx.assigns.connection)
 
     broadcast_event(ctx, "connections", %{
       "connections" => connections,
@@ -93,6 +89,17 @@ defmodule KinoDB.SQLCell do
     })
 
     {:noreply, assign(ctx, connections: connections, connection: connection)}
+  end
+
+  defp search_connection([connection | _], nil), do: connection
+
+  defp search_connection([], connection), do: connection
+
+  defp search_connection(connections, %{variable: variable}) do
+    case Enum.find(connections, &(&1.variable == variable)) do
+      nil -> List.first(connections)
+      connection -> connection
+    end
   end
 
   @compile {:no_warn_undefined, {DBConnection, :connection_module, 1}}
@@ -103,6 +110,7 @@ defmodule KinoDB.SQLCell do
       case Atom.to_string(module) do
         "Elixir.Postgrex" <> _ -> "postgres"
         "Elixir.MyXQL" <> _ -> "mysql"
+        "Elixir.Exqlite" <> _ -> "sqlite"
         _ -> nil
       end
     else
@@ -135,6 +143,10 @@ defmodule KinoDB.SQLCell do
 
   defp to_quoted(%{"connection" => %{"type" => "mysql"}} = attrs) do
     to_quoted(attrs, quote(do: MyXQL), fn _n -> "?" end)
+  end
+
+  defp to_quoted(%{"connection" => %{"type" => "sqlite"}} = attrs) do
+    to_quoted(attrs, quote(do: Exqlite), fn n -> "?#{n}" end)
   end
 
   defp to_quoted(_ctx) do

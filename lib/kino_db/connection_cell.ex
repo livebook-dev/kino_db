@@ -11,13 +11,14 @@ defmodule KinoDB.ConnectionCell do
 
   @impl true
   def init(attrs, ctx) do
-    default_type = default_db_type()
-    default_port = @default_port_by_type[default_type]
+    type = attrs["type"] || default_db_type()
+    default_port = @default_port_by_type[type]
 
     fields = %{
       "variable" => Kino.SmartCell.prefixed_var_name("conn", attrs["variable"]),
-      "type" => attrs["type"] || default_type,
+      "type" => type,
       "hostname" => attrs["hostname"] || "localhost",
+      "database_path" => attrs["database_path"] || "",
       "port" => attrs["port"] || default_port,
       "username" => attrs["username"] || "",
       "password" => attrs["password"] || "",
@@ -81,9 +82,20 @@ defmodule KinoDB.ConnectionCell do
 
   defp to_updates(_fields, field, value), do: %{field => value}
 
+  @default_keys ["type", "variable"]
+
   @impl true
-  def to_attrs(ctx) do
-    ctx.assigns.fields
+  def to_attrs(%{assigns: %{fields: fields}}) do
+    connection_keys =
+      case fields["type"] do
+        "sqlite" ->
+          ["database_path"]
+
+        type when type in ["postgres", "mysql"] ->
+          ~w|database hostname port username password|
+      end
+
+    Map.take(fields, @default_keys ++ connection_keys)
   end
 
   @impl true
@@ -91,31 +103,39 @@ defmodule KinoDB.ConnectionCell do
     attrs |> to_quoted() |> Kino.SmartCell.quoted_to_string()
   end
 
-  defp to_quoted(%{"type" => "postgres"} = attrs) do
-    to_quoted(attrs, quote(do: Postgrex))
-  end
-
-  defp to_quoted(%{"type" => "mysql"} = attrs) do
-    to_quoted(attrs, quote(do: MyXQL))
-  end
-
-  defp to_quoted(_ctx) do
+  defp to_quoted(%{"type" => "sqlite"} = attrs) do
     quote do
+      opts = [database: unquote(attrs["database_path"])]
+
+      {:ok, unquote(quoted_var(attrs["variable"]))} = Kino.start_child({Exqlite, opts})
     end
   end
 
-  defp to_quoted(attrs, quoted_module) do
+  defp to_quoted(%{"type" => "postgres"} = attrs) do
     quote do
-      opts = [
+      opts = unquote(shared_options(attrs))
+
+      {:ok, unquote(quoted_var(attrs["variable"]))} = Kino.start_child({Postgrex, opts})
+    end
+  end
+
+  defp to_quoted(%{"type" => "mysql"} = attrs) do
+    quote do
+      opts = unquote(shared_options(attrs))
+
+      {:ok, unquote(quoted_var(attrs["variable"]))} = Kino.start_child({MyXQL, opts})
+    end
+  end
+
+  defp shared_options(attrs) do
+    quote do
+      [
         hostname: unquote(attrs["hostname"]),
         port: unquote(attrs["port"]),
         username: unquote(attrs["username"]),
         password: unquote(attrs["password"]),
         database: unquote(attrs["database"])
       ]
-
-      {:ok, unquote(quoted_var(attrs["variable"]))} =
-        Kino.start_child({unquote(quoted_module), opts})
     end
   end
 
@@ -125,6 +145,7 @@ defmodule KinoDB.ConnectionCell do
     cond do
       Code.ensure_loaded?(Postgrex) -> "postgres"
       Code.ensure_loaded?(MyXQL) -> "mysql"
+      Code.ensure_loaded?(Exqlite) -> "sqlite"
       true -> "postgres"
     end
   end
@@ -138,6 +159,12 @@ defmodule KinoDB.ConnectionCell do
   defp missing_dep(%{"type" => "mysql"}) do
     unless Code.ensure_loaded?(MyXQL) do
       ~s/{:myxql, "~> 0.6.2"}/
+    end
+  end
+
+  defp missing_dep(%{"type" => "sqlite"}) do
+    unless Code.ensure_loaded?(Exqlite) do
+      ~s/{:exqlite, "~> 0.11.0"}/
     end
   end
 

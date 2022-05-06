@@ -44,6 +44,22 @@ defmodule KinoDB.ConnectionCellTest do
                {:ok, db} = Kino.start_child({MyXQL, opts})\
                """
     end
+
+    test "restores source code from attrs with SQLite3" do
+      attrs = %{
+        "variable" => "db",
+        "type" => "sqlite",
+        "database_path" => "/path/to/sqlite3.db"
+      }
+
+      {_kino, source} = start_smart_cell!(ConnectionCell, attrs)
+
+      assert source ==
+               """
+               opts = [database: "/path/to/sqlite3.db"]
+               {:ok, db} = Kino.start_child({Exqlite, opts})\
+               """
+    end
   end
 
   test "when a field changes, broadcasts the change and sends source update" do
