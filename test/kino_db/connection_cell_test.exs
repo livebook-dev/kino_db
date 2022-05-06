@@ -49,7 +49,7 @@ defmodule KinoDB.ConnectionCellTest do
       attrs = %{
         "variable" => "db",
         "type" => "sqlite",
-        "path" => "/path/to/sqlite3.db"
+        "database_path" => "/path/to/sqlite3.db"
       }
 
       {_kino, source} = start_smart_cell!(ConnectionCell, attrs)

@@ -13,20 +13,20 @@ defmodule KinoDB.ConnectionCell do
   def init(attrs, ctx) do
     type = attrs["type"] || default_db_type()
 
-    fields = %{
-      "variable" => Kino.SmartCell.prefixed_var_name("conn", attrs["variable"]),
-      "type" => type,
-      "connection_data" => connection_data(type, attrs)
-    }
+    fields =
+      Map.merge(fields(type, attrs), %{
+        "variable" => Kino.SmartCell.prefixed_var_name("conn", attrs["variable"]),
+        "type" => type
+      })
 
     {:ok, assign(ctx, fields: fields, missing_dep: missing_dep(fields))}
   end
 
-  defp connection_data("sqlite", attrs) do
+  defp fields("sqlite", attrs) do
     %{"database_path" => attrs["database_path"] || ""}
   end
 
-  defp connection_data(type, attrs) do
+  defp fields(type, attrs) do
     default_port = @default_port_by_type[type]
 
     %{
