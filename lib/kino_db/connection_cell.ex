@@ -12,31 +12,20 @@ defmodule KinoDB.ConnectionCell do
   @impl true
   def init(attrs, ctx) do
     type = attrs["type"] || default_db_type()
-
-    fields =
-      Map.merge(fields(type, attrs), %{
-        "variable" => Kino.SmartCell.prefixed_var_name("conn", attrs["variable"]),
-        "type" => type
-      })
-
-    {:ok, assign(ctx, fields: fields, missing_dep: missing_dep(fields))}
-  end
-
-  defp fields("sqlite", attrs) do
-    %{"database_path" => attrs["database_path"] || ""}
-  end
-
-  defp fields(type, attrs) do
     default_port = @default_port_by_type[type]
 
-    %{
+    fields = %{
+      "variable" => Kino.SmartCell.prefixed_var_name("conn", attrs["variable"]),
       "type" => type,
       "hostname" => attrs["hostname"] || "localhost",
+      "database_path" => attrs["database_path"] || "",
       "port" => attrs["port"] || default_port,
       "username" => attrs["username"] || "",
       "password" => attrs["password"] || "",
       "database" => attrs["database"] || ""
     }
+
+    {:ok, assign(ctx, fields: fields, missing_dep: missing_dep(fields))}
   end
 
   @impl true
@@ -97,14 +86,16 @@ defmodule KinoDB.ConnectionCell do
 
   @impl true
   def to_attrs(%{assigns: %{fields: fields}}) do
-    case fields["type"] do
-      "sqlite" ->
-        Map.take(fields, @default_keys ++ ["database_path"])
+    connection_keys =
+      case fields["type"] do
+        "sqlite" ->
+          ["database_path"]
 
-      type when type in ["postgres", "mysql"] ->
-        keys = ~w|database hostname port username password|
-        Map.take(fields, @default_keys ++ keys)
-    end
+        type when type in ["postgres", "mysql"] ->
+          ~w|database hostname port username password|
+      end
+
+    Map.take(fields, @default_keys ++ connection_keys)
   end
 
   @impl true

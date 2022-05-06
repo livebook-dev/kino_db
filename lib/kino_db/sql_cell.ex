@@ -95,10 +95,10 @@ defmodule KinoDB.SQLCell do
 
   defp search_connection([], connection), do: connection
 
-  defp search_connection(connections, %{type: type} = connection) do
-    case Enum.find(connections, &(&1.type == type)) do
+  defp search_connection(connections, %{variable: variable}) do
+    case Enum.find(connections, &(&1.variable == variable)) do
       nil -> List.first(connections)
-      ^connection -> connection
+      connection -> connection
     end
   end
 
