@@ -22,7 +22,13 @@ defmodule KinoDB.ConnectionCell do
       "port" => attrs["port"] || default_port,
       "username" => attrs["username"] || "",
       "password" => attrs["password"] || "",
-      "database" => attrs["database"] || ""
+      "database" => attrs["database"] || "",
+      "project_id" => attrs["project_id"] || "",
+      "default_dataset_id" => attrs["default_dataset_id"] || "",
+      "private_key_id" => attrs["private_key_id"] || "",
+      "private_key" => attrs["private_key"] || "",
+      "client_email" => attrs["client_email"] || "",
+      "client_id" => attrs["client_id"] || ""
     }
 
     {:ok, assign(ctx, fields: fields, missing_dep: missing_dep(fields))}
@@ -91,6 +97,9 @@ defmodule KinoDB.ConnectionCell do
         "sqlite" ->
           ["database_path"]
 
+        "bigquery" ->
+          ~w|project_id default_dataset_id private_key_id private_key client_email client_id|
+
         type when type in ["postgres", "mysql"] ->
           ~w|database hostname port username password|
       end
@@ -127,6 +136,36 @@ defmodule KinoDB.ConnectionCell do
     end
   end
 
+  defp to_quoted(%{"type" => "bigquery"} = attrs) do
+    quote do
+      scopes = ["https://www.googleapis.com/auth/cloud-platform"]
+
+      credentials = %{
+        "project_id" => unquote(attrs["project_id"]),
+        "private_key_id" => unquote(attrs["private_key_id"]),
+        "private_key" => unquote(ensure_break_line(attrs["private_key"])),
+        "client_email" => unquote(attrs["client_email"]),
+        "client_id" => unquote(attrs["client_id"])
+      }
+
+      goth_opts = [
+        name: Goth,
+        http_client: &Req.request/1,
+        source: {:service_account, credentials, scopes: scopes}
+      ]
+
+      opts = [
+        goth: Goth,
+        project_id: unquote(attrs["project_id"]),
+        default_dataset_id: unquote(attrs["default_dataset_id"])
+      ]
+
+      unquote(quoted_var(attrs["variable"])) = ReqBigQuery.attach(Req.new(), opts)
+
+      {:ok, _goth_pid} = Kino.start_child({Goth, goth_opts})
+    end
+  end
+
   defp shared_options(attrs) do
     quote do
       [
@@ -141,11 +180,14 @@ defmodule KinoDB.ConnectionCell do
 
   defp quoted_var(string), do: {String.to_atom(string), [], nil}
 
+  defp ensure_break_line(string), do: String.replace(string, "\\n", "\n")
+
   defp default_db_type() do
     cond do
       Code.ensure_loaded?(Postgrex) -> "postgres"
       Code.ensure_loaded?(MyXQL) -> "mysql"
       Code.ensure_loaded?(Exqlite) -> "sqlite"
+      Code.ensure_loaded?(ReqBigQuery) -> "bigquery"
       true -> "postgres"
     end
   end
@@ -165,6 +207,12 @@ defmodule KinoDB.ConnectionCell do
   defp missing_dep(%{"type" => "sqlite"}) do
     unless Code.ensure_loaded?(Exqlite) do
       ~s/{:exqlite, "~> 0.11.0"}/
+    end
+  end
+
+  defp missing_dep(%{"type" => "bigquery"}) do
+    unless Code.ensure_loaded?(ReqBigQuery) do
+      ~s/{:req_bigquery, github: "livebook-dev\/req_bigquery"}/
     end
   end
 

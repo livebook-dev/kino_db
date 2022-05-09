@@ -60,6 +60,44 @@ defmodule KinoDB.ConnectionCellTest do
                {:ok, db} = Kino.start_child({Exqlite, opts})\
                """
     end
+
+    test "restores source code from attrs with BigQuery" do
+      attrs = %{
+        "variable" => "db",
+        "type" => "bigquery",
+        "project_id" => "",
+        "private_key_id" => "",
+        "private_key" => "",
+        "client_email" => "",
+        "client_id" => "",
+        "default_dataset_id" => ""
+      }
+
+      {_kino, source} = start_smart_cell!(ConnectionCell, attrs)
+
+      assert source ==
+               """
+               scopes = ["https://www.googleapis.com/auth/cloud-platform"]
+
+               credentials = %{
+                 "project_id" => "",
+                 "private_key_id" => "",
+                 "private_key" => "",
+                 "client_email" => "",
+                 "client_id" => ""
+               }
+
+               goth_opts = [
+                 name: Goth,
+                 http_client: &Req.request/1,
+                 source: {:service_account, credentials, scopes: scopes}
+               ]
+
+               opts = [goth: Goth, project_id: "", default_dataset_id: ""]
+               db = ReqBigQuery.attach(Req.new(), opts)
+               {:ok, _goth_pid} = Kino.start_child({Goth, goth_opts})\
+               """
+    end
   end
 
   test "when a field changes, broadcasts the change and sends source update" do
