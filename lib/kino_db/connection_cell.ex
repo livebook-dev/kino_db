@@ -142,7 +142,7 @@ defmodule KinoDB.ConnectionCell do
     quote do
       scopes = ["https://www.googleapis.com/auth/cloud-platform"]
 
-      credentials = unquote(attrs["credentials"])
+      credentials = unquote(Macro.escape(attrs["credentials"]))
 
       goth_opts = [
         name: Goth,

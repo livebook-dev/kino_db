@@ -66,10 +66,7 @@ defmodule KinoDB.ConnectionCellTest do
         "variable" => "db",
         "type" => "bigquery",
         "project_id" => "",
-        "private_key_id" => "",
-        "private_key" => "",
-        "client_email" => "",
-        "client_id" => "",
+        "credentials" => %{},
         "default_dataset_id" => ""
       }
 
@@ -78,14 +75,7 @@ defmodule KinoDB.ConnectionCellTest do
       assert source ==
                """
                scopes = ["https://www.googleapis.com/auth/cloud-platform"]
-
-               credentials = %{
-                 "project_id" => "",
-                 "private_key_id" => "",
-                 "private_key" => "",
-                 "client_email" => "",
-                 "client_id" => ""
-               }
+               credentials = %{}
 
                goth_opts = [
                  name: Goth,
