@@ -36,6 +36,18 @@ button {
   gap: 8px;
 }
 
+.draggable {
+  width: 100%;
+  justify-content: center;
+  text-align: center;
+  background-color: var(--gray-50);
+  font-size: 0.875rem;
+  border: 1px solid var(--gray-200);
+  border-radius: 0.5rem;
+  color: var(--gray-400);
+  padding: 10px;
+}
+
 .header {
   display: flex;
   justify-content: flex-start;
@@ -54,6 +66,10 @@ button {
   border: 1px solid var(--gray-200);
   border-radius: 0.5rem;
   color: var(--gray-600);
+}
+
+input[type="file"] {
+  display: none;
 }
 
 input[type="number"] {

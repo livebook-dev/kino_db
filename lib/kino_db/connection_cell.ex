@@ -25,10 +25,7 @@ defmodule KinoDB.ConnectionCell do
       "database" => attrs["database"] || "",
       "project_id" => attrs["project_id"] || "",
       "default_dataset_id" => attrs["default_dataset_id"] || "",
-      "private_key_id" => attrs["private_key_id"] || "",
-      "private_key" => attrs["private_key"] || "",
-      "client_email" => attrs["client_email"] || "",
-      "client_id" => attrs["client_id"] || ""
+      "credentials" => attrs["credentials"] || %{}
     }
 
     {:ok, assign(ctx, fields: fields, missing_dep: missing_dep(fields))}
@@ -98,7 +95,7 @@ defmodule KinoDB.ConnectionCell do
           ["database_path"]
 
         "bigquery" ->
-          ~w|project_id default_dataset_id private_key_id private_key client_email client_id|
+          ~w|project_id default_dataset_id credentials|
 
         type when type in ["postgres", "mysql"] ->
           ~w|database hostname port username password|
@@ -137,21 +134,20 @@ defmodule KinoDB.ConnectionCell do
   end
 
   defp to_quoted(%{"type" => "bigquery"} = attrs) do
+    goth_source_type =
+      if type = attrs["credentials"]["type"],
+        do: String.to_atom(type),
+        else: :service_account
+
     quote do
       scopes = ["https://www.googleapis.com/auth/cloud-platform"]
 
-      credentials = %{
-        "project_id" => unquote(attrs["project_id"]),
-        "private_key_id" => unquote(attrs["private_key_id"]),
-        "private_key" => unquote(ensure_break_line(attrs["private_key"])),
-        "client_email" => unquote(attrs["client_email"]),
-        "client_id" => unquote(attrs["client_id"])
-      }
+      credentials = unquote(attrs["credentials"])
 
       goth_opts = [
         name: Goth,
         http_client: &Req.request/1,
-        source: {:service_account, credentials, scopes: scopes}
+        source: {unquote(goth_source_type), credentials, scopes: scopes}
       ]
 
       opts = [
@@ -179,8 +175,6 @@ defmodule KinoDB.ConnectionCell do
   end
 
   defp quoted_var(string), do: {String.to_atom(string), [], nil}
-
-  defp ensure_break_line(string), do: String.replace(string, "\\n", "\n")
 
   defp default_db_type() do
     cond do
