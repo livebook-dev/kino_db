@@ -118,7 +118,7 @@ defmodule KinoDB.SQLCell do
     end
   end
 
-  defp connection_type(%Req.Request{request_steps: request_steps}) do
+  defp connection_type(%{request_steps: request_steps}) do
     cond do
       Keyword.has_key?(request_steps, :bigquery_run) -> "bigquery"
       true -> nil
