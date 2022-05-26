@@ -133,32 +133,27 @@ defmodule KinoDB.ConnectionCell do
     end
   end
 
+  # TODO: Support :refresh_token and :metadata for Goth source type
+  # See: https://github.com/peburrows/goth/blob/e62ca4afddfabdb3d599c3594fee02c49a2350e4/lib/goth/token.ex#L159-L172
   defp to_quoted(%{"type" => "bigquery"} = attrs) do
-    goth_source_type =
-      if type = attrs["credentials"]["type"],
-        do: String.to_atom(type),
-        else: :service_account
-
     quote do
-      scopes = ["https://www.googleapis.com/auth/cloud-platform"]
-
       credentials = unquote(Macro.escape(attrs["credentials"]))
 
-      goth_opts = [
-        name: Goth,
-        http_client: &Req.request/1,
-        source: {unquote(goth_source_type), credentials, scopes: scopes}
-      ]
-
       opts = [
-        goth: Goth,
-        project_id: unquote(attrs["project_id"]),
-        default_dataset_id: unquote(attrs["default_dataset_id"])
+        name: ReqBigQuery.Goth,
+        http_client: &Req.request/1,
+        source: {:service_account, credentials, []}
       ]
 
-      unquote(quoted_var(attrs["variable"])) = ReqBigQuery.attach(Req.new(), opts)
+      unquote(quoted_var(attrs["variable"])) =
+        Req.new(http_errors: :raise)
+        |> ReqBigQuery.attach(
+          goth: ReqBigQuery.Goth,
+          project_id: unquote(attrs["project_id"]),
+          default_dataset_id: unquote(attrs["default_dataset_id"])
+        )
 
-      {:ok, _goth_pid} = Kino.start_child({Goth, goth_opts})
+      {:ok, _goth_pid} = Kino.start_child({Goth, opts})
     end
   end
 

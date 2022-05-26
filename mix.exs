@@ -32,7 +32,7 @@ defmodule KinoDB.MixProject do
       {:exqlite, "~> 0.11", optional: true},
       {:myxql, "~> 0.6.2 or ~> 0.7", optional: true},
       {:db_connection, "~> 2.4.2", optional: true},
-      {:req_bigquery, git: "git@github.com:livebook-dev/req_bigquery.git", optional: true},
+      {:req_bigquery, github: "livebook-dev/req_bigquery", optional: true},
       {:ex_doc, "~> 0.28", only: :dev, runtime: false}
     ]
   end

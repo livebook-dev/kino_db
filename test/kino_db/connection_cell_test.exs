@@ -74,18 +74,19 @@ defmodule KinoDB.ConnectionCellTest do
 
       assert source ==
                """
-               scopes = ["https://www.googleapis.com/auth/cloud-platform"]
                credentials = %{}
 
-               goth_opts = [
-                 name: Goth,
+               opts = [
+                 name: ReqBigQuery.Goth,
                  http_client: &Req.request/1,
-                 source: {:service_account, credentials, scopes: scopes}
+                 source: {:service_account, credentials, []}
                ]
 
-               opts = [goth: Goth, project_id: "", default_dataset_id: ""]
-               db = ReqBigQuery.attach(Req.new(), opts)
-               {:ok, _goth_pid} = Kino.start_child({Goth, goth_opts})\
+               db =
+                 Req.new(http_errors: :raise)
+                 |> ReqBigQuery.attach(goth: ReqBigQuery.Goth, project_id: "", default_dataset_id: "")
+
+               {:ok, _goth_pid} = Kino.start_child({Goth, opts})\
                """
     end
   end

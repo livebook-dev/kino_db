@@ -172,14 +172,14 @@ defmodule KinoDB.SQLCell do
 
     req_opts =
       if opts == [],
-        do: [[bigquery: bigquery]],
-        else: [Keyword.put(Enum.at(opts, 0), :bigquery, bigquery)]
+        do: [bigquery: bigquery],
+        else: Keyword.put(Enum.at(opts, 0), :bigquery, bigquery)
 
     quote do
       unquote(quoted_var(attrs["result_variable"])) =
         Req.post!(
           unquote(quoted_var(attrs["connection"]["variable"])),
-          unquote_splicing(req_opts)
+          unquote(req_opts)
         )
     end
   end
