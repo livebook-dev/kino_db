@@ -100,7 +100,7 @@ button {
   border-bottom: 0;
 }
 
-.info-box {
+.help-box {
   padding: 16px;
   white-space: pre-wrap;
   font-weight: 500;
@@ -161,4 +161,28 @@ select.input {
   background-position: center right 10px;
   background-size: 10px;
   padding-right: 28px;
+}
+
+.info-box {
+  margin-bottom: 24px;
+  padding: 16px;
+  border-radius: 0.5rem;
+  font-weight: 500;
+  font-size: 0.875rem;
+  background-color: var(--gray-100);
+  color: var(--gray-500);
+}
+
+.info-box p {
+  margin: 0;
+  padding: 0.3em 0;
+}
+
+.info-box p:first-child {
+  padding-top: 0;
+}
+
+.strong {
+  color: var(--gray-600);
+  padding-left: 0;
 }
