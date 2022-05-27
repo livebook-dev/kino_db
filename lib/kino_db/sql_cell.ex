@@ -167,7 +167,7 @@ defmodule KinoDB.SQLCell do
         Req.post!(
           unquote(quoted_var(attrs["connection"]["variable"])),
           unquote(req_opts)
-        )
+        ).body
     end
   end
 

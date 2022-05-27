@@ -84,7 +84,7 @@ defmodule KinoDB.SQLCellTest do
              """
 
       assert SQLCell.to_source(put_in(attrs["connection"]["type"], "bigquery")) == """
-             result = Req.post!(conn, bigquery: {\"SELECT id FROM users\", []})\
+             result = Req.post!(conn, bigquery: {\"SELECT id FROM users\", []}).body\
              """
     end
 
@@ -140,7 +140,7 @@ defmodule KinoDB.SQLCellTest do
                     SELECT id FROM users
                     WHERE last_name = 'Sherlock'
                     """, []}
-               )\
+               ).body\
              '''
     end
 
@@ -181,7 +181,7 @@ defmodule KinoDB.SQLCellTest do
                Req.post!(conn,
                  bigquery:
                    {"SELECT id FROM users WHERE id ? AND name LIKE ?", [user_id, search <> "%"]}
-               )\
+               ).body\
              '''
     end
 
@@ -245,7 +245,7 @@ defmodule KinoDB.SQLCellTest do
                     -- WHERE id = {{user_id1}}
                     /* WHERE id = {{user_id2}} */ WHERE id = ?
                     """, [user_id3]}
-               )\
+               ).body\
              '''
     end
 
@@ -270,7 +270,7 @@ defmodule KinoDB.SQLCellTest do
              """
 
       assert SQLCell.to_source(put_in(attrs["connection"]["type"], "bigquery")) == """
-             result = Req.post!(conn, bigquery: {"SELECT id FROM users", []}, timeout: 30000)\
+             result = Req.post!(conn, bigquery: {"SELECT id FROM users", []}, timeout: 30000).body\
              """
     end
   end
