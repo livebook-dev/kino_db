@@ -132,6 +132,16 @@ input[type="number"] {
   flex-grow: 1;
 }
 
+.help-box {
+  padding: 8px 16px;
+  font-weight: 500;
+  color: var(--gray-500);
+}
+
+.help-box a {
+  color: var(--gray-500);
+}
+
 .info-box {
   margin-bottom: 24px;
   padding: 16px;
