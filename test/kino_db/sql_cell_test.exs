@@ -82,6 +82,10 @@ defmodule KinoDB.SQLCellTest do
       assert SQLCell.to_source(put_in(attrs["connection"]["type"], "sqlite")) == """
              result = Exqlite.query!(conn, "SELECT id FROM users", [])\
              """
+
+      assert SQLCell.to_source(put_in(attrs["connection"]["type"], "bigquery")) == """
+             result = Req.post!(conn, bigquery: {\"SELECT id FROM users\", []}).body\
+             """
     end
 
     test "uses heredoc string for a multi-line query" do
@@ -127,6 +131,17 @@ defmodule KinoDB.SQLCellTest do
                  []
                )\
              '''
+
+      assert SQLCell.to_source(put_in(attrs["connection"]["type"], "bigquery")) == ~s'''
+             result =
+               Req.post!(conn,
+                 bigquery:
+                   {"""
+                    SELECT id FROM users
+                    WHERE last_name = 'Sherlock'
+                    """, []}
+               ).body\
+             '''
     end
 
     test "parses parameter expressions" do
@@ -159,6 +174,14 @@ defmodule KinoDB.SQLCellTest do
                  user_id,
                  search <> "%"
                ])\
+             '''
+
+      assert SQLCell.to_source(put_in(attrs["connection"]["type"], "bigquery")) == ~s'''
+             result =
+               Req.post!(conn,
+                 bigquery:
+                   {"SELECT id FROM users WHERE id ? AND name LIKE ?", [user_id, search <> "%"]}
+               ).body\
              '''
     end
 
@@ -212,6 +235,18 @@ defmodule KinoDB.SQLCellTest do
                  [user_id3]
                )\
              '''
+
+      assert SQLCell.to_source(put_in(attrs["connection"]["type"], "bigquery")) == ~s'''
+             result =
+               Req.post!(conn,
+                 bigquery:
+                   {"""
+                    SELECT id from users
+                    -- WHERE id = {{user_id1}}
+                    /* WHERE id = {{user_id2}} */ WHERE id = ?
+                    """, [user_id3]}
+               ).body\
+             '''
     end
 
     test "passes timeout option when a timeout is specified" do
@@ -232,6 +267,10 @@ defmodule KinoDB.SQLCellTest do
 
       assert SQLCell.to_source(put_in(attrs["connection"]["type"], "sqlite")) == """
              result = Exqlite.query!(conn, "SELECT id FROM users", [], timeout: 30000)\
+             """
+
+      assert SQLCell.to_source(put_in(attrs["connection"]["type"], "bigquery")) == """
+             result = Req.post!(conn, bigquery: {"SELECT id FROM users", []}, timeout: 30000).body\
              """
     end
   end

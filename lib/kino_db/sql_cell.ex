@@ -118,6 +118,13 @@ defmodule KinoDB.SQLCell do
     end
   end
 
+  defp connection_type(%{request_steps: request_steps}) do
+    cond do
+      Keyword.has_key?(request_steps, :bigquery_run) -> "bigquery"
+      true -> nil
+    end
+  end
+
   defp connection_type(_connection), do: nil
 
   @impl true
@@ -147,6 +154,21 @@ defmodule KinoDB.SQLCell do
 
   defp to_quoted(%{"connection" => %{"type" => "sqlite"}} = attrs) do
     to_quoted(attrs, quote(do: Exqlite), fn n -> "?#{n}" end)
+  end
+
+  defp to_quoted(%{"connection" => %{"type" => "bigquery"}} = attrs) do
+    {query, params} = parameterize(attrs["query"], fn _n -> "?" end)
+    bigquery = {quoted_query(query), params}
+    opts = query_opts_args(attrs)
+    req_opts = opts |> Enum.at(0, []) |> Keyword.put(:bigquery, bigquery)
+
+    quote do
+      unquote(quoted_var(attrs["result_variable"])) =
+        Req.post!(
+          unquote(quoted_var(attrs["connection"]["variable"])),
+          unquote(req_opts)
+        ).body
+    end
   end
 
   defp to_quoted(_ctx) do

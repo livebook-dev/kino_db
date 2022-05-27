@@ -60,6 +60,37 @@ defmodule KinoDB.ConnectionCellTest do
                {:ok, db} = Kino.start_child({Exqlite, opts})\
                """
     end
+
+    test "restores source code from attrs with BigQuery" do
+      attrs = %{
+        "variable" => "db",
+        "type" => "bigquery",
+        "project_id" => "",
+        "credentials" => %{},
+        "default_dataset_id" => ""
+      }
+
+      {_kino, source} = start_smart_cell!(ConnectionCell, attrs)
+
+      assert source ==
+               """
+               credentials = %{}
+
+               opts = [
+                 name: ReqBigQuery.Goth,
+                 http_client: &Req.request/1,
+                 source: {:service_account, credentials, []}
+               ]
+
+               {:ok, _pid} = Kino.start_child({Goth, opts})
+
+               db =
+                 Req.new(http_errors: :raise)
+                 |> ReqBigQuery.attach(goth: ReqBigQuery.Goth, project_id: "", default_dataset_id: "")
+
+               :ok\
+               """
+    end
   end
 
   test "when a field changes, broadcasts the change and sends source update" do

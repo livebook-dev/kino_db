@@ -22,7 +22,10 @@ defmodule KinoDB.ConnectionCell do
       "port" => attrs["port"] || default_port,
       "username" => attrs["username"] || "",
       "password" => attrs["password"] || "",
-      "database" => attrs["database"] || ""
+      "database" => attrs["database"] || "",
+      "project_id" => attrs["project_id"] || "",
+      "default_dataset_id" => attrs["default_dataset_id"] || "",
+      "credentials" => attrs["credentials"] || %{}
     }
 
     {:ok, assign(ctx, fields: fields, missing_dep: missing_dep(fields))}
@@ -91,6 +94,9 @@ defmodule KinoDB.ConnectionCell do
         "sqlite" ->
           ["database_path"]
 
+        "bigquery" ->
+          ~w|project_id default_dataset_id credentials|
+
         type when type in ["postgres", "mysql"] ->
           ~w|database hostname port username password|
       end
@@ -127,6 +133,32 @@ defmodule KinoDB.ConnectionCell do
     end
   end
 
+  # TODO: Support :refresh_token and :metadata for Goth source type
+  # See: https://github.com/peburrows/goth/blob/e62ca4afddfabdb3d599c3594fee02c49a2350e4/lib/goth/token.ex#L159-L172
+  defp to_quoted(%{"type" => "bigquery"} = attrs) do
+    quote do
+      credentials = unquote(Macro.escape(attrs["credentials"]))
+
+      opts = [
+        name: ReqBigQuery.Goth,
+        http_client: &Req.request/1,
+        source: {:service_account, credentials, []}
+      ]
+
+      {:ok, _pid} = Kino.start_child({Goth, opts})
+
+      unquote(quoted_var(attrs["variable"])) =
+        Req.new(http_errors: :raise)
+        |> ReqBigQuery.attach(
+          goth: ReqBigQuery.Goth,
+          project_id: unquote(attrs["project_id"]),
+          default_dataset_id: unquote(attrs["default_dataset_id"])
+        )
+
+      :ok
+    end
+  end
+
   defp shared_options(attrs) do
     quote do
       [
@@ -146,6 +178,7 @@ defmodule KinoDB.ConnectionCell do
       Code.ensure_loaded?(Postgrex) -> "postgres"
       Code.ensure_loaded?(MyXQL) -> "mysql"
       Code.ensure_loaded?(Exqlite) -> "sqlite"
+      Code.ensure_loaded?(ReqBigQuery) -> "bigquery"
       true -> "postgres"
     end
   end
@@ -165,6 +198,12 @@ defmodule KinoDB.ConnectionCell do
   defp missing_dep(%{"type" => "sqlite"}) do
     unless Code.ensure_loaded?(Exqlite) do
       ~s/{:exqlite, "~> 0.11.0"}/
+    end
+  end
+
+  defp missing_dep(%{"type" => "bigquery"}) do
+    unless Code.ensure_loaded?(ReqBigQuery) do
+      ~s|{:req_bigquery, github: "livebook-dev/req_bigquery"}|
     end
   end
 
