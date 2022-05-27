@@ -162,3 +162,27 @@ select.input {
   background-size: 10px;
   padding-right: 28px;
 }
+
+.conn-box {
+  margin-bottom: 24px;
+  padding: 16px;
+  border-radius: 0.5rem;
+  font-weight: 500;
+  font-size: 0.875rem;
+  background-color: var(--gray-100);
+  color: var(--gray-500);
+}
+
+.conn-box p {
+  margin: 0;
+  padding: 0.3em 0;
+}
+
+.conn-box p:first-child {
+  padding-top: 0;
+}
+
+.conn-box span {
+  color: var(--gray-600);
+  padding-left: 0;
+}
