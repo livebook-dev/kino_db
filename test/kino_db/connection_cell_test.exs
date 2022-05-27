@@ -82,11 +82,13 @@ defmodule KinoDB.ConnectionCellTest do
                  source: {:service_account, credentials, []}
                ]
 
+               {:ok, _pid} = Kino.start_child({Goth, opts})
+
                db =
                  Req.new(http_errors: :raise)
                  |> ReqBigQuery.attach(goth: ReqBigQuery.Goth, project_id: "", default_dataset_id: "")
 
-               {:ok, _goth_pid} = Kino.start_child({Goth, opts})\
+               :ok\
                """
     end
   end

@@ -157,23 +157,10 @@ defmodule KinoDB.SQLCell do
   end
 
   defp to_quoted(%{"connection" => %{"type" => "bigquery"}} = attrs) do
-    to_quoted(attrs, quote(do: ReqBigQuery), fn _n -> "?" end)
-  end
-
-  defp to_quoted(_ctx) do
-    quote do
-    end
-  end
-
-  defp to_quoted(attrs, quote(do: ReqBigQuery), next) do
-    {query, params} = parameterize(attrs["query"], next)
+    {query, params} = parameterize(attrs["query"], fn _n -> "?" end)
     bigquery = {quoted_query(query), params}
     opts = query_opts_args(attrs)
-
-    req_opts =
-      if opts == [],
-        do: [bigquery: bigquery],
-        else: Keyword.put(Enum.at(opts, 0), :bigquery, bigquery)
+    req_opts = opts |> Enum.at(0, []) |> Keyword.put(:bigquery, bigquery)
 
     quote do
       unquote(quoted_var(attrs["result_variable"])) =
@@ -181,6 +168,11 @@ defmodule KinoDB.SQLCell do
           unquote(quoted_var(attrs["connection"]["variable"])),
           unquote(req_opts)
         )
+    end
+  end
+
+  defp to_quoted(_ctx) do
+    quote do
     end
   end
 

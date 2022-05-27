@@ -145,6 +145,8 @@ defmodule KinoDB.ConnectionCell do
         source: {:service_account, credentials, []}
       ]
 
+      {:ok, _pid} = Kino.start_child({Goth, opts})
+
       unquote(quoted_var(attrs["variable"])) =
         Req.new(http_errors: :raise)
         |> ReqBigQuery.attach(
@@ -153,7 +155,7 @@ defmodule KinoDB.ConnectionCell do
           default_dataset_id: unquote(attrs["default_dataset_id"])
         )
 
-      {:ok, _goth_pid} = Kino.start_child({Goth, opts})
+      :ok
     end
   end
 
@@ -201,7 +203,7 @@ defmodule KinoDB.ConnectionCell do
 
   defp missing_dep(%{"type" => "bigquery"}) do
     unless Code.ensure_loaded?(ReqBigQuery) do
-      ~s/{:req_bigquery, github: "livebook-dev\/req_bigquery"}/
+      ~s|{:req_bigquery, github: "livebook-dev/req_bigquery"}|
     end
   end
 
