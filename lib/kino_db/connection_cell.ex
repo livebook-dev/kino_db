@@ -25,6 +25,8 @@ defmodule KinoDB.ConnectionCell do
       "database" => attrs["database"] || "",
       "schema" => attrs["schema"] || "",
       "account_name" => attrs["account_name"] || "",
+      "warehouse" => attrs["warehouse"] || "",
+      "role" => attrs["role"] || "",
       "project_id" => attrs["project_id"] || "",
       "default_dataset_id" => attrs["default_dataset_id"] || "",
       "credentials" => attrs["credentials"] || %{}
@@ -100,7 +102,7 @@ defmodule KinoDB.ConnectionCell do
           ~w|project_id default_dataset_id credentials|
 
         "snowflake" ->
-          ~w|hostname username password account_name database schema|
+          ~w|hostname username password account_name database schema role warehouse|
 
         type when type in ["postgres", "mysql"] ->
           ~w|database hostname port username password|
@@ -166,18 +168,18 @@ defmodule KinoDB.ConnectionCell do
 
   defp to_quoted(%{"type" => "snowflake"} = attrs) do
     quote do
-      credentials = unquote(Macro.escape(attrs["credentials"]))
+        opts = [
+          host: unquote(attrs["hostname"]),
+          username: unquote(attrs["username"]),
+          password: unquote(attrs["password"]),
+          database: unquote(attrs["database"]),
+          schema: unquote(attrs["schema"]),
+          account_name: unquote(attrs["account_name"]),
+          role: unquote(attrs["role"]),
+          warehouse: unquote(attrs["warehouse"]),
+        ]
 
-      unquote(quoted_var(attrs["variable"])) =
-        nil
-#        Req.new(http_errors: :raise)
-#        |> ReqBigQuery.attach(
-#             goth: ReqBigQuery.Goth,
-#             project_id: unquote(attrs["project_id"]),
-#             default_dataset_id: unquote(attrs["default_dataset_id"])
-#           )
-
-      :ok
+      {:ok, unquote(quoted_var(attrs["variable"]))} = Kino.start_child({SnowflakeEx, opts})
     end
   end
 

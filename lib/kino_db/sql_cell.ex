@@ -111,6 +111,7 @@ defmodule KinoDB.SQLCell do
         "Elixir.Postgrex" <> _ -> "postgres"
         "Elixir.MyXQL" <> _ -> "mysql"
         "Elixir.Exqlite" <> _ -> "sqlite"
+        "Elixir.SnowflakeEx" <> _ -> "snowflake"
         _ -> nil
       end
     else
@@ -173,20 +174,7 @@ defmodule KinoDB.SQLCell do
   end
 
   defp to_quoted(%{"connection" => %{"type" => "snowflake"}} = attrs) do
-    {query, params} = parameterize(attrs["query"], fn _n -> "?" end)
-    snowflake = {quoted_query(query), params}
-    opts = query_opts_args(attrs)
-    req_opts = opts |> Enum.at(0, []) |> Keyword.put(:snowflake, snowflake)
-    require IEx
-    IEx.pry
-
-    quote do
-      unquote(quoted_var(attrs["result_variable"])) =
-        Req.post!(
-          unquote(quoted_var(attrs["connection"]["variable"])),
-          unquote(req_opts)
-        ).body
-    end
+    to_quoted(attrs, quote(do: SnowflakeEx), fn n -> "$#{n}" end)
   end
 
   defp to_quoted(_ctx) do
