@@ -121,6 +121,7 @@ defmodule KinoDB.SQLCell do
   defp connection_type(%{request_steps: request_steps}) do
     cond do
       Keyword.has_key?(request_steps, :bigquery_run) -> "bigquery"
+      Keyword.has_key?(request_steps, :snowflake_run) -> "snowflake"
       true -> nil
     end
   end
@@ -161,6 +162,23 @@ defmodule KinoDB.SQLCell do
     bigquery = {quoted_query(query), params}
     opts = query_opts_args(attrs)
     req_opts = opts |> Enum.at(0, []) |> Keyword.put(:bigquery, bigquery)
+
+    quote do
+      unquote(quoted_var(attrs["result_variable"])) =
+        Req.post!(
+          unquote(quoted_var(attrs["connection"]["variable"])),
+          unquote(req_opts)
+        ).body
+    end
+  end
+
+  defp to_quoted(%{"connection" => %{"type" => "snowflake"}} = attrs) do
+    {query, params} = parameterize(attrs["query"], fn _n -> "?" end)
+    snowflake = {quoted_query(query), params}
+    opts = query_opts_args(attrs)
+    req_opts = opts |> Enum.at(0, []) |> Keyword.put(:snowflake, snowflake)
+    require IEx
+    IEx.pry
 
     quote do
       unquote(quoted_var(attrs["result_variable"])) =

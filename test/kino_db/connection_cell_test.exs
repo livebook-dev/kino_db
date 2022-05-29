@@ -91,6 +91,36 @@ defmodule KinoDB.ConnectionCellTest do
                :ok\
                """
     end
+
+    test "restores source code from attrs with Snowflake" do
+      attrs = %{
+        "variable" => "db",
+        "type" => "snowflake",
+        "hostname" => "https://example.com",
+        "username" => "admin",
+        "password" => "pass",
+        "database" => "default",
+        "schema" => "foobar"
+      }
+
+      {kino, source} = start_smart_cell!(ConnectionCell, attrs)
+
+      require IEx
+      IEx.pry
+
+      assert source ==
+               """
+               credentials = %{}
+
+               {:ok, _pid} = Kino.start_child({Goth, opts})
+
+               db =
+                 Req.new(http_errors: :raise)
+                 |> ReqBigQuery.attach(goth: ReqBigQuery.Goth, project_id: "", default_dataset_id: "")
+
+               :ok\
+               """
+    end
   end
 
   test "when a field changes, broadcasts the change and sends source update" do

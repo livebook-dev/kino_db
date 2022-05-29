@@ -33,6 +33,7 @@ defmodule KinoDB.MixProject do
       {:myxql, "~> 0.6.2 or ~> 0.7", optional: true},
       {:db_connection, "~> 2.4.2", optional: true},
       {:req_bigquery, github: "livebook-dev/req_bigquery", optional: true},
+      {:snowflake_elixir, github: "joshuataylor/snowflake_elixir", optional: true},
       {:ex_doc, "~> 0.28", only: :dev, runtime: false}
     ]
   end

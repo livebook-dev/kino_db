@@ -23,6 +23,8 @@ defmodule KinoDB.ConnectionCell do
       "username" => attrs["username"] || "",
       "password" => attrs["password"] || "",
       "database" => attrs["database"] || "",
+      "schema" => attrs["schema"] || "",
+      "account_name" => attrs["account_name"] || "",
       "project_id" => attrs["project_id"] || "",
       "default_dataset_id" => attrs["default_dataset_id"] || "",
       "credentials" => attrs["credentials"] || %{}
@@ -97,6 +99,9 @@ defmodule KinoDB.ConnectionCell do
         "bigquery" ->
           ~w|project_id default_dataset_id credentials|
 
+        "snowflake" ->
+          ~w|hostname username password account_name database schema|
+
         type when type in ["postgres", "mysql"] ->
           ~w|database hostname port username password|
       end
@@ -159,6 +164,23 @@ defmodule KinoDB.ConnectionCell do
     end
   end
 
+  defp to_quoted(%{"type" => "snowflake"} = attrs) do
+    quote do
+      credentials = unquote(Macro.escape(attrs["credentials"]))
+
+      unquote(quoted_var(attrs["variable"])) =
+        nil
+#        Req.new(http_errors: :raise)
+#        |> ReqBigQuery.attach(
+#             goth: ReqBigQuery.Goth,
+#             project_id: unquote(attrs["project_id"]),
+#             default_dataset_id: unquote(attrs["default_dataset_id"])
+#           )
+
+      :ok
+    end
+  end
+
   defp shared_options(attrs) do
     quote do
       [
@@ -179,6 +201,7 @@ defmodule KinoDB.ConnectionCell do
       Code.ensure_loaded?(MyXQL) -> "mysql"
       Code.ensure_loaded?(Exqlite) -> "sqlite"
       Code.ensure_loaded?(ReqBigQuery) -> "bigquery"
+      Code.ensure_loaded?(SnowflakeEx) -> "snowflake"
       true -> "postgres"
     end
   end
@@ -204,6 +227,12 @@ defmodule KinoDB.ConnectionCell do
   defp missing_dep(%{"type" => "bigquery"}) do
     unless Code.ensure_loaded?(ReqBigQuery) do
       ~s|{:req_bigquery, github: "livebook-dev/req_bigquery"}|
+    end
+  end
+
+  defp missing_dep(%{"type" => "snowflake"}) do
+    unless Code.ensure_loaded?(SnowflakeEx) do
+      ~s|{:snowflake_elixir, github: "joshuataylor/snowflake_elixir"}|
     end
   end
 
