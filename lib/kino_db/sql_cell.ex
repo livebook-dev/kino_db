@@ -121,6 +121,7 @@ defmodule KinoDB.SQLCell do
   defp connection_type(%{request_steps: request_steps}) do
     cond do
       Keyword.has_key?(request_steps, :bigquery_run) -> "bigquery"
+      Keyword.has_key?(request_steps, :athena_run) -> "athena"
       true -> nil
     end
   end
@@ -157,18 +158,11 @@ defmodule KinoDB.SQLCell do
   end
 
   defp to_quoted(%{"connection" => %{"type" => "bigquery"}} = attrs) do
-    {query, params} = parameterize(attrs["query"], fn _n -> "?" end)
-    bigquery = {quoted_query(query), params}
-    opts = query_opts_args(attrs)
-    req_opts = opts |> Enum.at(0, []) |> Keyword.put(:bigquery, bigquery)
+    to_req_quoted(attrs, fn _n -> "?" end, :bigquery)
+  end
 
-    quote do
-      unquote(quoted_var(attrs["result_variable"])) =
-        Req.post!(
-          unquote(quoted_var(attrs["connection"]["variable"])),
-          unquote(req_opts)
-        ).body
-    end
+  defp to_quoted(%{"connection" => %{"type" => "athena"}} = attrs) do
+    to_req_quoted(attrs, fn _n -> "?" end, :athena)
   end
 
   defp to_quoted(_ctx) do
@@ -188,6 +182,21 @@ defmodule KinoDB.SQLCell do
           unquote(params),
           unquote_splicing(opts_args)
         )
+    end
+  end
+
+  defp to_req_quoted(attrs, next, req_key) do
+    {query, params} = parameterize(attrs["query"], next)
+    query = {quoted_query(query), params}
+    opts = query_opts_args(attrs)
+    req_opts = opts |> Enum.at(0, []) |> Keyword.put(req_key, query)
+
+    quote do
+      unquote(quoted_var(attrs["result_variable"])) =
+        Req.post!(
+          unquote(quoted_var(attrs["connection"]["variable"])),
+          unquote(req_opts)
+        ).body
     end
   end
 

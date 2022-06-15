@@ -152,6 +152,35 @@ defmodule KinoDB.ConnectionCellTest do
                :ok\
                """
     end
+
+    test "restores source code from attrs with Athena" do
+      attrs = %{
+        "variable" => "db",
+        "type" => "athena",
+        "access_key_id" => "id",
+        "secret_access_key" => "secret",
+        "region" => "region",
+        "database" => "default",
+        "output_location" => "s3://my-bucket"
+      }
+
+      {_kino, source} = start_smart_cell!(ConnectionCell, attrs)
+
+      assert source ==
+               """
+               db =
+                 Req.new(http_errors: :raise)
+                 |> ReqAthena.attach(
+                   access_key_id: "id",
+                   secret_access_key: "secret",
+                   region: "region",
+                   database: "default",
+                   output_location: "s3://my-bucket"
+                 )
+
+               :ok\
+               """
+    end
   end
 
   test "when a field changes, broadcasts the change and sends source update" do
