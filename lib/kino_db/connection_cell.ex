@@ -185,8 +185,8 @@ defmodule KinoDB.ConnectionCell do
   end
 
   defp check_bigquery_credentials(attrs) do
-    cond do
-      match?(%{"type" => "service_account"}, attrs["credentials"]) ->
+    case attrs["credentials"] do
+      %{"type" => "service_account"} ->
         quote do
           credentials = unquote(Macro.escape(attrs["credentials"]))
 
@@ -197,7 +197,7 @@ defmodule KinoDB.ConnectionCell do
           ]
         end
 
-      match?(%{"type" => "authorized_user"}, attrs["credentials"]) ->
+      %{"type" => "authorized_user"} ->
         quote do
           credentials = unquote(Macro.escape(attrs["credentials"]))
 
@@ -208,7 +208,7 @@ defmodule KinoDB.ConnectionCell do
           ]
         end
 
-      true ->
+      _empty_map ->
         quote do
           opts = [name: ReqBigQuery.Goth, http_client: &Req.request/1]
         end
