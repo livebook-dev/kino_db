@@ -304,22 +304,23 @@ defmodule KinoDB.ConnectionCell do
   end
 
   defp help_box(%{"type" => "bigquery"}) do
-    if Code.ensure_loaded?(Req) and is_running_on_google_metadata?() do
-      "You are running inside Google Cloud. Uploading the credentials above is optional."
-    else
-      ~s|You must upload your Google BigQuery Credentials (<a href="https://cloud.google.com/iam/docs/creating-managing-service-account-keys" target="_blank">find them here</a>) or authenticate your machine with <strong>gcloud</strong> CLI authentication.|
+    if Code.ensure_loaded?(Mint.HTTP) do
+      if is_running_on_google_metadata?() do
+        "You are running inside Google Cloud. Uploading the credentials above is optional."
+      else
+        ~s|You must upload your Google BigQuery Credentials (<a href="https://cloud.google.com/iam/docs/creating-managing-service-account-keys" target="_blank">find them here</a>) or authenticate your machine with <strong>gcloud</strong> CLI authentication.|
+      end
     end
   end
 
   defp help_box(_ctx), do: nil
 
-  @metadata_url "http://metadata.google.internal/computeMetadata/v1/instance/service-accounts/default/token"
-  @metadata_headers [{"metadata-flavor", "Google"}]
-
   defp is_running_on_google_metadata? do
-    Req.get!(@metadata_url, headers: @metadata_headers, http_errors: :raise, retry: :never)
-    true
-  rescue
-    Mint.TransportError -> false
+    with {:ok, conn} <- Mint.HTTP.connect(:http, "metadata.google.internal", 80),
+         {:ok, _} <- Mint.HTTP.set_mode(conn, :passive) do
+    else
+      {:error, %Mint.TransportError{reason: :nxdomain}} ->
+        false
+    end
   end
 end
