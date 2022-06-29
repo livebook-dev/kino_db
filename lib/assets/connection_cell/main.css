@@ -140,6 +140,7 @@ input[required]:placeholder-shown {
   padding: 8px 16px;
   font-weight: 500;
   color: var(--gray-500);
+  display: inherit;
 }
 
 .help-box a {

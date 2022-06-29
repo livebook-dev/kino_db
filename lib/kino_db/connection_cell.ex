@@ -32,14 +32,16 @@ defmodule KinoDB.ConnectionCell do
       "output_location" => attrs["output_location"] || ""
     }
 
-    {:ok, assign(ctx, fields: fields, missing_dep: missing_dep(fields))}
+    {:ok,
+     assign(ctx, fields: fields, missing_dep: missing_dep(fields), help_box: help_box(fields))}
   end
 
   @impl true
   def handle_connect(ctx) do
     payload = %{
       fields: ctx.assigns.fields,
-      missing_dep: ctx.assigns.missing_dep
+      missing_dep: ctx.assigns.missing_dep,
+      help_box: ctx.assigns.help_box
     }
 
     {:ok, payload, ctx}
@@ -299,5 +301,25 @@ defmodule KinoDB.ConnectionCell do
       [node] -> node
       nodes -> {:__block__, [], nodes}
     end
+  end
+
+  defp help_box(%{"type" => "bigquery"}) do
+    if Code.ensure_loaded?(Req) and is_running_on_google_metadata?() do
+      "You are running inside Google Cloud. Uploading the credentials above is optional."
+    else
+      ~s|You must upload your Google BigQuery Credentials (<a href="https://cloud.google.com/iam/docs/creating-managing-service-account-keys" target="_blank">find them here</a>) or authenticate your machine with <strong>gcloud</strong> CLI authentication.|
+    end
+  end
+
+  defp help_box(_ctx), do: nil
+
+  @metadata_url "http://metadata.google.internal/computeMetadata/v1/instance/service-accounts/default/token"
+  @metadata_headers [{"metadata-flavor", "Google"}]
+
+  defp is_running_on_google_metadata? do
+    Req.get!(@metadata_url, headers: @metadata_headers, http_errors: :raise, retry: :never)
+    true
+  rescue
+    Mint.TransportError -> false
   end
 end
