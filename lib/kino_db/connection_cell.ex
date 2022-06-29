@@ -317,10 +317,8 @@ defmodule KinoDB.ConnectionCell do
 
   defp is_running_on_google_metadata? do
     with {:ok, conn} <- Mint.HTTP.connect(:http, "metadata.google.internal", 80),
-         {:ok, _} <- Mint.HTTP.set_mode(conn, :passive) do
-    else
-      {:error, %Mint.TransportError{reason: :nxdomain}} ->
-        false
-    end
+         {:ok, _} <- Mint.HTTP.set_mode(conn, :passive),
+         do: true,
+         else: (_ -> false)
   end
 end
