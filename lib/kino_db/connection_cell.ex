@@ -133,29 +133,55 @@ defmodule KinoDB.ConnectionCell do
     end
   end
 
-  # TODO: Support :refresh_token and :metadata for Goth source type
-  # See: https://github.com/peburrows/goth/blob/e62ca4afddfabdb3d599c3594fee02c49a2350e4/lib/goth/token.ex#L159-L172
   defp to_quoted(%{"type" => "bigquery"} = attrs) do
-    quote do
-      credentials = unquote(Macro.escape(attrs["credentials"]))
+    goth_opts_block = check_bigquery_credentials(attrs)
 
-      opts = [
-        name: ReqBigQuery.Goth,
-        http_client: &Req.request/1,
-        source: {:service_account, credentials, []}
-      ]
+    conn_block =
+      quote do
+        {:ok, _pid} = Kino.start_child({Goth, opts})
 
-      {:ok, _pid} = Kino.start_child({Goth, opts})
+        unquote(quoted_var(attrs["variable"])) =
+          Req.new(http_errors: :raise)
+          |> ReqBigQuery.attach(
+            goth: ReqBigQuery.Goth,
+            project_id: unquote(attrs["project_id"]),
+            default_dataset_id: unquote(attrs["default_dataset_id"])
+          )
 
-      unquote(quoted_var(attrs["variable"])) =
-        Req.new(http_errors: :raise)
-        |> ReqBigQuery.attach(
-          goth: ReqBigQuery.Goth,
-          project_id: unquote(attrs["project_id"]),
-          default_dataset_id: unquote(attrs["default_dataset_id"])
-        )
+        :ok
+      end
 
-      :ok
+    join_quoted([goth_opts_block, conn_block])
+  end
+
+  defp check_bigquery_credentials(attrs) do
+    cond do
+      match?(%{"type" => "service_account"}, attrs["credentials"]) ->
+        quote do
+          credentials = unquote(Macro.escape(attrs["credentials"]))
+
+          opts = [
+            name: ReqBigQuery.Goth,
+            http_client: &Req.request/1,
+            source: {:service_account, credentials}
+          ]
+        end
+
+      match?(%{"type" => "authorized_user"}, attrs["credentials"]) ->
+        quote do
+          credentials = unquote(Macro.escape(attrs["credentials"]))
+
+          opts = [
+            name: ReqBigQuery.Goth,
+            http_client: &Req.request/1,
+            source: {:refresh_token, credentials}
+          ]
+        end
+
+      true ->
+        quote do
+          opts = [name: ReqBigQuery.Goth, http_client: &Req.request/1]
+        end
     end
   end
 
@@ -208,4 +234,17 @@ defmodule KinoDB.ConnectionCell do
   end
 
   defp missing_dep(_ctx), do: nil
+
+  defp join_quoted(quoted_blocks) do
+    asts =
+      Enum.flat_map(quoted_blocks, fn
+        {:__block__, _meta, nodes} -> nodes
+        node -> [node]
+      end)
+
+    case asts do
+      [node] -> node
+      nodes -> {:__block__, [], nodes}
+    end
+  end
 end
