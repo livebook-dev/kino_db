@@ -128,21 +128,15 @@ defmodule KinoDB.ConnectionCell do
           ~w|hostname port|
       end
 
-    if is_required_fields_filled?(attrs, required_keys) do
+    if required_fields_filled?(attrs, required_keys) do
       attrs |> to_quoted() |> Kino.SmartCell.quoted_to_string()
     else
       to_quoted(nil) |> Kino.SmartCell.quoted_to_string()
     end
   end
 
-  defp is_required_fields_filled?(attrs, keys) do
-    Enum.reduce_while(keys, true, fn key, _ ->
-      if attrs[key] in [nil, ""] do
-        {:halt, false}
-      else
-        {:cont, true}
-      end
-    end)
+  defp required_fields_filled?(attrs, keys) do
+    not Enum.any?(keys, fn key -> attrs[key] in [nil, ""] end)
   end
 
   defp to_quoted(%{"type" => "sqlite"} = attrs) do
