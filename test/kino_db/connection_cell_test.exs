@@ -65,7 +65,7 @@ defmodule KinoDB.ConnectionCellTest do
       attrs = %{
         "variable" => "db",
         "type" => "bigquery",
-        "project_id" => "",
+        "project_id" => "foo",
         "credentials" => %{},
         "default_dataset_id" => ""
       }
@@ -79,7 +79,7 @@ defmodule KinoDB.ConnectionCellTest do
 
                db =
                  Req.new(http_errors: :raise)
-                 |> ReqBigQuery.attach(goth: ReqBigQuery.Goth, project_id: "", default_dataset_id: "")
+                 |> ReqBigQuery.attach(goth: ReqBigQuery.Goth, project_id: "foo", default_dataset_id: "")
 
                :ok\
                """
@@ -113,7 +113,7 @@ defmodule KinoDB.ConnectionCellTest do
 
                db =
                  Req.new(http_errors: :raise)
-                 |> ReqBigQuery.attach(goth: ReqBigQuery.Goth, project_id: "", default_dataset_id: "")
+                 |> ReqBigQuery.attach(goth: ReqBigQuery.Goth, project_id: "foo", default_dataset_id: "")
 
                :ok\
                """
@@ -147,7 +147,7 @@ defmodule KinoDB.ConnectionCellTest do
 
                db =
                  Req.new(http_errors: :raise)
-                 |> ReqBigQuery.attach(goth: ReqBigQuery.Goth, project_id: "", default_dataset_id: "")
+                 |> ReqBigQuery.attach(goth: ReqBigQuery.Goth, project_id: "foo", default_dataset_id: "")
 
                :ok\
                """
@@ -180,6 +180,22 @@ defmodule KinoDB.ConnectionCellTest do
 
                :ok\
                """
+    end
+
+    test "doesn't restore source code with empty required fields" do
+      attrs = %{
+        "variable" => "db",
+        "type" => "mysql",
+        "hostname" => "",
+        "port" => nil,
+        "username" => "admin",
+        "password" => "pass",
+        "database" => "default"
+      }
+
+      {_kino, source} = start_smart_cell!(ConnectionCell, attrs)
+
+      assert source == ""
     end
   end
 
