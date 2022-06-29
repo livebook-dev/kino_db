@@ -305,7 +305,7 @@ defmodule KinoDB.ConnectionCell do
 
   defp help_box(%{"type" => "bigquery"}) do
     if Code.ensure_loaded?(Mint.HTTP) do
-      if is_running_on_google_metadata?() do
+      if running_on_google_metadata?() do
         "You are running inside Google Cloud. Uploading the credentials above is optional."
       else
         ~s|You must upload your Google BigQuery Credentials (<a href="https://cloud.google.com/iam/docs/creating-managing-service-account-keys" target="_blank">find them here</a>) or authenticate your machine with <strong>gcloud</strong> CLI authentication.|
@@ -315,7 +315,7 @@ defmodule KinoDB.ConnectionCell do
 
   defp help_box(_ctx), do: nil
 
-  defp is_running_on_google_metadata? do
+  defp running_on_google_metadata? do
     with {:ok, conn} <- Mint.HTTP.connect(:http, "metadata.google.internal", 80),
          {:ok, _} <- Mint.HTTP.set_mode(conn, :passive),
          do: true,
