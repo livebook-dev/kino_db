@@ -86,6 +86,10 @@ defmodule KinoDB.SQLCellTest do
       assert SQLCell.to_source(put_in(attrs["connection"]["type"], "bigquery")) == """
              result = Req.post!(conn, bigquery: {\"SELECT id FROM users\", []}).body\
              """
+
+      assert SQLCell.to_source(put_in(attrs["connection"]["type"], "athena")) == """
+             result = Req.post!(conn, athena: {\"SELECT id FROM users\", []}).body\
+             """
     end
 
     test "uses heredoc string for a multi-line query" do
@@ -142,6 +146,17 @@ defmodule KinoDB.SQLCellTest do
                     """, []}
                ).body\
              '''
+
+      assert SQLCell.to_source(put_in(attrs["connection"]["type"], "athena")) == ~s'''
+             result =
+               Req.post!(conn,
+                 athena:
+                   {"""
+                    SELECT id FROM users
+                    WHERE last_name = 'Sherlock'
+                    """, []}
+               ).body\
+             '''
     end
 
     test "parses parameter expressions" do
@@ -181,6 +196,13 @@ defmodule KinoDB.SQLCellTest do
                Req.post!(conn,
                  bigquery:
                    {"SELECT id FROM users WHERE id ? AND name LIKE ?", [user_id, search <> "%"]}
+               ).body\
+             '''
+
+      assert SQLCell.to_source(put_in(attrs["connection"]["type"], "athena")) == ~s'''
+             result =
+               Req.post!(conn,
+                 athena: {"SELECT id FROM users WHERE id ? AND name LIKE ?", [user_id, search <> "%"]}
                ).body\
              '''
     end
@@ -247,6 +269,18 @@ defmodule KinoDB.SQLCellTest do
                     """, [user_id3]}
                ).body\
              '''
+
+      assert SQLCell.to_source(put_in(attrs["connection"]["type"], "athena")) == ~s'''
+             result =
+               Req.post!(conn,
+                 athena:
+                   {"""
+                    SELECT id from users
+                    -- WHERE id = {{user_id1}}
+                    /* WHERE id = {{user_id2}} */ WHERE id = ?
+                    """, [user_id3]}
+               ).body\
+             '''
     end
 
     test "passes timeout option when a timeout is specified" do
@@ -271,6 +305,10 @@ defmodule KinoDB.SQLCellTest do
 
       assert SQLCell.to_source(put_in(attrs["connection"]["type"], "bigquery")) == """
              result = Req.post!(conn, bigquery: {"SELECT id FROM users", []}, timeout: 30000).body\
+             """
+
+      assert SQLCell.to_source(put_in(attrs["connection"]["type"], "athena")) == """
+             result = Req.post!(conn, athena: {"SELECT id FROM users", []}, timeout: 30000).body\
              """
     end
   end

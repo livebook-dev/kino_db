@@ -25,7 +25,11 @@ defmodule KinoDB.ConnectionCell do
       "database" => attrs["database"] || "",
       "project_id" => attrs["project_id"] || "",
       "default_dataset_id" => attrs["default_dataset_id"] || "",
-      "credentials" => attrs["credentials"] || %{}
+      "credentials" => attrs["credentials"] || %{},
+      "access_key_id" => attrs["access_key_id"] || "",
+      "secret_access_key" => attrs["secret_access_key"] || "",
+      "region" => attrs["region"] || "",
+      "output_location" => attrs["output_location"] || ""
     }
 
     {:ok, assign(ctx, fields: fields, missing_dep: missing_dep(fields))}
@@ -96,6 +100,9 @@ defmodule KinoDB.ConnectionCell do
 
         "bigquery" ->
           ~w|project_id default_dataset_id credentials|
+
+        "athena" ->
+          ~w|access_key_id secret_access_key region output_location database|
 
         type when type in ["postgres", "mysql"] ->
           ~w|database hostname port username password|
@@ -185,6 +192,22 @@ defmodule KinoDB.ConnectionCell do
     end
   end
 
+  defp to_quoted(%{"type" => "athena"} = attrs) do
+    quote do
+      unquote(quoted_var(attrs["variable"])) =
+        Req.new(http_errors: :raise)
+        |> ReqAthena.attach(
+          access_key_id: unquote(attrs["access_key_id"]),
+          secret_access_key: unquote(attrs["secret_access_key"]),
+          region: unquote(attrs["region"]),
+          database: unquote(attrs["database"]),
+          output_location: unquote(attrs["output_location"])
+        )
+
+      :ok
+    end
+  end
+
   defp shared_options(attrs) do
     quote do
       [
@@ -205,6 +228,7 @@ defmodule KinoDB.ConnectionCell do
       Code.ensure_loaded?(MyXQL) -> "mysql"
       Code.ensure_loaded?(Exqlite) -> "sqlite"
       Code.ensure_loaded?(ReqBigQuery) -> "bigquery"
+      Code.ensure_loaded?(ReqAthena) -> "athena"
       true -> "postgres"
     end
   end
@@ -230,6 +254,12 @@ defmodule KinoDB.ConnectionCell do
   defp missing_dep(%{"type" => "bigquery"}) do
     unless Code.ensure_loaded?(ReqBigQuery) do
       ~s|{:req_bigquery, github: "livebook-dev/req_bigquery"}|
+    end
+  end
+
+  defp missing_dep(%{"type" => "athena"}) do
+    unless Code.ensure_loaded?(ReqAthena) do
+      ~s|{:req_athena, github: "livebook-dev/req_athena"}|
     end
   end
 
