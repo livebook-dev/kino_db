@@ -131,7 +131,7 @@ defmodule KinoDB.ConnectionCell do
     if required_fields_filled?(attrs, required_keys) do
       attrs |> to_quoted() |> Kino.SmartCell.quoted_to_string()
     else
-      to_quoted(nil) |> Kino.SmartCell.quoted_to_string()
+      ""
     end
   end
 
@@ -228,11 +228,6 @@ defmodule KinoDB.ConnectionCell do
         )
 
       :ok
-    end
-  end
-
-  defp to_quoted(_ctx) do
-    quote do
     end
   end
 
