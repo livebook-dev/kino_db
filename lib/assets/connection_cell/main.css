@@ -76,7 +76,7 @@ input[type="number"] {
   appearance: textfield;
 }
 
-input[required] {
+input[required]:placeholder-shown {
   border-color: rgba(219, 25, 32, 0.5);
 }
 
