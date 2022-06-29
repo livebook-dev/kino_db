@@ -76,6 +76,10 @@ input[type="number"] {
   appearance: textfield;
 }
 
+input[required] {
+  border-color: rgba(219, 25, 32, 0.5);
+}
+
 .input::placeholder {
   color: var(--gray-400);
 }
