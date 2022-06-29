@@ -74,12 +74,73 @@ defmodule KinoDB.ConnectionCellTest do
 
       assert source ==
                """
-               credentials = %{}
+               opts = [name: ReqBigQuery.Goth, http_client: &Req.request/1]
+               {:ok, _pid} = Kino.start_child({Goth, opts})
+
+               db =
+                 Req.new(http_errors: :raise)
+                 |> ReqBigQuery.attach(goth: ReqBigQuery.Goth, project_id: "", default_dataset_id: "")
+
+               :ok\
+               """
+
+      credentials = %{
+        "private_key" => "foo",
+        "client_email" => "alice@example.com",
+        "token_uri" => "/",
+        "type" => "service_account"
+      }
+
+      {_kino, source} =
+        start_smart_cell!(ConnectionCell, put_in(attrs["credentials"], credentials))
+
+      assert source ==
+               """
+               credentials = %{
+                 "client_email" => "alice@example.com",
+                 "private_key" => "foo",
+                 "token_uri" => "/",
+                 "type" => "service_account"
+               }
 
                opts = [
                  name: ReqBigQuery.Goth,
                  http_client: &Req.request/1,
-                 source: {:service_account, credentials, []}
+                 source: {:service_account, credentials}
+               ]
+
+               {:ok, _pid} = Kino.start_child({Goth, opts})
+
+               db =
+                 Req.new(http_errors: :raise)
+                 |> ReqBigQuery.attach(goth: ReqBigQuery.Goth, project_id: "", default_dataset_id: "")
+
+               :ok\
+               """
+
+      credentials = %{
+        "refresh_token" => "foo",
+        "client_id" => "alice@example.com",
+        "client_secret" => "bar",
+        "type" => "authorized_user"
+      }
+
+      {_kino, source} =
+        start_smart_cell!(ConnectionCell, put_in(attrs["credentials"], credentials))
+
+      assert source ==
+               """
+               credentials = %{
+                 "client_id" => "alice@example.com",
+                 "client_secret" => "bar",
+                 "refresh_token" => "foo",
+                 "type" => "authorized_user"
+               }
+
+               opts = [
+                 name: ReqBigQuery.Goth,
+                 http_client: &Req.request/1,
+                 source: {:refresh_token, credentials}
                ]
 
                {:ok, _pid} = Kino.start_child({Goth, opts})
