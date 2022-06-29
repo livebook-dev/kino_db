@@ -113,7 +113,36 @@ defmodule KinoDB.ConnectionCell do
 
   @impl true
   def to_source(attrs) do
-    attrs |> to_quoted() |> Kino.SmartCell.quoted_to_string()
+    required_keys =
+      case attrs["type"] do
+        "sqlite" ->
+          ["database_path"]
+
+        "bigquery" ->
+          ~w|project_id|
+
+        "athena" ->
+          ~w|access_key_id secret_access_key region output_location database|
+
+        type when type in ["postgres", "mysql"] ->
+          ~w|hostname port|
+      end
+
+    if is_required_fields_filled?(attrs, required_keys) do
+      attrs |> to_quoted() |> Kino.SmartCell.quoted_to_string()
+    else
+      to_quoted(nil) |> Kino.SmartCell.quoted_to_string()
+    end
+  end
+
+  defp is_required_fields_filled?(attrs, keys) do
+    Enum.reduce_while(keys, true, fn key, _ ->
+      if attrs[key] in [nil, ""] do
+        {:halt, false}
+      else
+        {:cont, true}
+      end
+    end)
   end
 
   defp to_quoted(%{"type" => "sqlite"} = attrs) do
@@ -205,6 +234,11 @@ defmodule KinoDB.ConnectionCell do
         )
 
       :ok
+    end
+  end
+
+  defp to_quoted(_ctx) do
+    quote do
     end
   end
 
