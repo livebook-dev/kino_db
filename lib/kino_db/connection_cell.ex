@@ -32,14 +32,16 @@ defmodule KinoDB.ConnectionCell do
       "output_location" => attrs["output_location"] || ""
     }
 
-    {:ok, assign(ctx, fields: fields, missing_dep: missing_dep(fields))}
+    {:ok,
+     assign(ctx, fields: fields, missing_dep: missing_dep(fields), help_box: help_box(fields))}
   end
 
   @impl true
   def handle_connect(ctx) do
     payload = %{
       fields: ctx.assigns.fields,
-      missing_dep: ctx.assigns.missing_dep
+      missing_dep: ctx.assigns.missing_dep,
+      help_box: ctx.assigns.help_box
     }
 
     {:ok, payload, ctx}
@@ -185,8 +187,8 @@ defmodule KinoDB.ConnectionCell do
   end
 
   defp check_bigquery_credentials(attrs) do
-    cond do
-      match?(%{"type" => "service_account"}, attrs["credentials"]) ->
+    case attrs["credentials"] do
+      %{"type" => "service_account"} ->
         quote do
           credentials = unquote(Macro.escape(attrs["credentials"]))
 
@@ -197,7 +199,7 @@ defmodule KinoDB.ConnectionCell do
           ]
         end
 
-      match?(%{"type" => "authorized_user"}, attrs["credentials"]) ->
+      %{"type" => "authorized_user"} ->
         quote do
           credentials = unquote(Macro.escape(attrs["credentials"]))
 
@@ -208,7 +210,7 @@ defmodule KinoDB.ConnectionCell do
           ]
         end
 
-      true ->
+      _empty_map ->
         quote do
           opts = [name: ReqBigQuery.Goth, http_client: &Req.request/1]
         end
@@ -299,5 +301,24 @@ defmodule KinoDB.ConnectionCell do
       [node] -> node
       nodes -> {:__block__, [], nodes}
     end
+  end
+
+  defp help_box(%{"type" => "bigquery"}) do
+    if Code.ensure_loaded?(Mint.HTTP) do
+      if running_on_google_metadata?() do
+        "You are running inside Google Cloud. Uploading the credentials above is optional."
+      else
+        ~s|You must upload your Google BigQuery Credentials (<a href="https://cloud.google.com/iam/docs/creating-managing-service-account-keys" target="_blank">find them here</a>) or authenticate your machine with <strong>gcloud</strong> CLI authentication.|
+      end
+    end
+  end
+
+  defp help_box(_ctx), do: nil
+
+  defp running_on_google_metadata? do
+    with {:ok, conn} <- Mint.HTTP.connect(:http, "metadata.google.internal", 80),
+         {:ok, _} <- Mint.HTTP.set_mode(conn, :passive),
+         do: true,
+         else: (_ -> false)
   end
 end
