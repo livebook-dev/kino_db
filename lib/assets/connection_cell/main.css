@@ -13,6 +13,8 @@
   --gray-800: #1c2a3a;
 
   --blue-100: #ecf0ff;
+
+  --red-300: #f1a3a6;
 }
 
 input,
@@ -76,8 +78,8 @@ input[type="number"] {
   appearance: textfield;
 }
 
-input[required]:placeholder-shown {
-  border-color: rgba(219, 25, 32, 0.5);
+input[required].empty {
+  border: 1px solid var(--red-300);
 }
 
 .input::placeholder {
