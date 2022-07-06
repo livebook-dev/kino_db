@@ -278,13 +278,13 @@ defmodule KinoDB.ConnectionCell do
 
   defp missing_dep(%{"type" => "bigquery"}) do
     unless Code.ensure_loaded?(ReqBigQuery) do
-      ~s|{:req_bigquery, github: "livebook-dev/req_bigquery"}|
+      ~s|{:req_bigquery, "~> 0.1.0"}|
     end
   end
 
   defp missing_dep(%{"type" => "athena"}) do
     unless Code.ensure_loaded?(ReqAthena) do
-      ~s|{:req_athena, github: "livebook-dev/req_athena"}|
+      ~s|{:req_athena, "~> 0.1.0"}|
     end
   end
 
