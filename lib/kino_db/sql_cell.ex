@@ -118,10 +118,10 @@ defmodule KinoDB.SQLCell do
     end
   end
 
-  defp connection_type(%{request_steps: request_steps}) do
+  defp connection_type(connection) when is_struct(connection, Req.Request) do
     cond do
-      Keyword.has_key?(request_steps, :bigquery_run) -> "bigquery"
-      Keyword.has_key?(request_steps, :athena_run) -> "athena"
+      Keyword.has_key?(connection.request_steps, :bigquery_run) -> "bigquery"
+      Keyword.has_key?(connection.request_steps, :athena_run) -> "athena"
       true -> nil
     end
   end
