@@ -32,8 +32,14 @@ defmodule KinoDB.ConnectionCell do
       "output_location" => attrs["output_location"] || ""
     }
 
-    {:ok,
-     assign(ctx, fields: fields, missing_dep: missing_dep(fields), help_box: help_box(fields))}
+    assigns = [
+      fields: fields,
+      missing_dep: missing_dep(fields),
+      help_box: help_box(fields),
+      has_aws_credentials: Code.ensure_loaded?(:aws_credentials)
+    ]
+
+    {:ok, assign(ctx, assigns)}
   end
 
   @impl true
@@ -41,7 +47,8 @@ defmodule KinoDB.ConnectionCell do
     payload = %{
       fields: ctx.assigns.fields,
       missing_dep: ctx.assigns.missing_dep,
-      help_box: ctx.assigns.help_box
+      help_box: ctx.assigns.help_box,
+      has_aws_credentials: ctx.assigns.has_aws_credentials
     }
 
     {:ok, payload, ctx}
@@ -91,7 +98,7 @@ defmodule KinoDB.ConnectionCell do
 
   defp to_updates(_fields, field, value), do: %{field => value}
 
-  @default_keys ["type", "variable"]
+  @default_keys ["type", "variable", "_keys_"]
 
   @impl true
   def to_attrs(%{assigns: %{fields: fields}}) do
@@ -110,7 +117,9 @@ defmodule KinoDB.ConnectionCell do
           ~w|database hostname port username password|
       end
 
-    Map.take(fields, @default_keys ++ connection_keys)
+    fields
+    |> Map.put("_keys_", connection_keys)
+    |> Map.take(@default_keys ++ connection_keys)
   end
 
   @impl true
@@ -124,7 +133,9 @@ defmodule KinoDB.ConnectionCell do
           ~w|project_id|
 
         "athena" ->
-          ~w|access_key_id secret_access_key region output_location database|
+          if Code.ensure_loaded?(:aws_credentials),
+            do: ~w|output_location database|,
+            else: ~w|access_key_id secret_access_key region output_location database|
 
         type when type in ["postgres", "mysql"] ->
           ~w|hostname port|
@@ -186,6 +197,24 @@ defmodule KinoDB.ConnectionCell do
     join_quoted([goth_opts_block, conn_block])
   end
 
+  defp to_quoted(%{"type" => "athena"} = attrs) do
+    quote do
+      unquote(quoted_var(attrs["variable"])) =
+        Req.new(http_errors: :raise)
+        |> ReqAthena.attach(
+          access_key_id: unquote(attrs["access_key_id"]),
+          database: unquote(attrs["database"]),
+          output_location: unquote(attrs["output_location"]),
+          region: unquote(attrs["region"]),
+          secret_access_key: unquote(attrs["secret_access_key"]),
+          token: unquote(attrs["token"]),
+          workgroup: unquote(attrs["workgroup"])
+        )
+
+      :ok
+    end
+  end
+
   defp check_bigquery_credentials(attrs) do
     case attrs["credentials"] do
       %{"type" => "service_account"} ->
@@ -214,22 +243,6 @@ defmodule KinoDB.ConnectionCell do
         quote do
           opts = [name: ReqBigQuery.Goth, http_client: &Req.request/1]
         end
-    end
-  end
-
-  defp to_quoted(%{"type" => "athena"} = attrs) do
-    quote do
-      unquote(quoted_var(attrs["variable"])) =
-        Req.new(http_errors: :raise)
-        |> ReqAthena.attach(
-          access_key_id: unquote(attrs["access_key_id"]),
-          secret_access_key: unquote(attrs["secret_access_key"]),
-          region: unquote(attrs["region"]),
-          database: unquote(attrs["database"]),
-          output_location: unquote(attrs["output_location"])
-        )
-
-      :ok
     end
   end
 

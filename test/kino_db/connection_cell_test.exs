@@ -181,10 +181,10 @@ defmodule KinoDB.ConnectionCellTest do
                  Req.new(http_errors: :raise)
                  |> ReqAthena.attach(
                    access_key_id: "id",
-                   secret_access_key: "secret",
-                   region: "region",
                    database: "default",
-                   output_location: "s3://my-bucket"
+                   output_location: "s3://my-bucket",
+                   region: "region",
+                   secret_access_key: "secret"
                  )
 
                :ok\
