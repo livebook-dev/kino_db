@@ -240,7 +240,8 @@ defmodule KinoDB.ConnectionCell do
         port: unquote(attrs["port"]),
         username: unquote(attrs["username"]),
         password: unquote(attrs["password"]),
-        database: unquote(attrs["database"])
+        database: unquote(attrs["database"]),
+        socket_options: [:inet6]
       ]
     end
   end

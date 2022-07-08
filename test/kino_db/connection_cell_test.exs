@@ -13,7 +13,15 @@ defmodule KinoDB.ConnectionCellTest do
 
       assert source ==
                """
-               opts = [hostname: "localhost", port: 5432, username: "", password: "", database: ""]
+               opts = [
+                 hostname: "localhost",
+                 port: 5432,
+                 username: "",
+                 password: "",
+                 database: "",
+                 socket_options: [:inet6]
+               ]
+
                {:ok, conn} = Kino.start_child({Postgrex, opts})\
                """
     end
@@ -38,7 +46,8 @@ defmodule KinoDB.ConnectionCellTest do
                  port: 4444,
                  username: "admin",
                  password: "pass",
-                 database: "default"
+                 database: "default",
+                 socket_options: [:inet6]
                ]
 
                {:ok, db} = Kino.start_child({MyXQL, opts})\
@@ -207,7 +216,15 @@ defmodule KinoDB.ConnectionCellTest do
     assert_broadcast_event(kino, "update", %{"fields" => %{"hostname" => "myhost"}})
 
     assert_smart_cell_update(kino, %{"hostname" => "myhost"}, """
-    opts = [hostname: "myhost", port: 5432, username: "", password: "", database: ""]
+    opts = [
+      hostname: "myhost",
+      port: 5432,
+      username: "",
+      password: "",
+      database: "",
+      socket_options: [:inet6]
+    ]
+
     {:ok, conn} = Kino.start_child({Postgrex, opts})\
     """)
   end
@@ -233,7 +250,15 @@ defmodule KinoDB.ConnectionCellTest do
     assert_broadcast_event(kino, "update", %{"fields" => %{"type" => "mysql", "port" => 3306}})
 
     assert_smart_cell_update(kino, %{"type" => "mysql", "port" => 3306}, """
-    opts = [hostname: "localhost", port: 3306, username: "", password: "", database: ""]
+    opts = [
+      hostname: "localhost",
+      port: 3306,
+      username: "",
+      password: "",
+      database: "",
+      socket_options: [:inet6]
+    ]
+
     {:ok, conn} = Kino.start_child({MyXQL, opts})\
     """)
   end
