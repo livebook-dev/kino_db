@@ -300,15 +300,15 @@ defmodule KinoDB.SQLCellTest do
              """
 
       assert SQLCell.to_source(put_in(attrs["connection"]["type"], "sqlite")) == """
-             result = Exqlite.query!(conn, "SELECT id FROM users", [], timeout: 30000)\
+             result = Exqlite.query!(conn, "SELECT id FROM users", [])\
              """
 
       assert SQLCell.to_source(put_in(attrs["connection"]["type"], "bigquery")) == """
-             result = Req.post!(conn, bigquery: {"SELECT id FROM users", []}, timeout: 30000).body\
+             result = Req.post!(conn, bigquery: {"SELECT id FROM users", []}).body\
              """
 
       assert SQLCell.to_source(put_in(attrs["connection"]["type"], "athena")) == """
-             result = Req.post!(conn, athena: {"SELECT id FROM users", []}, timeout: 30000).body\
+             result = Req.post!(conn, athena: {"SELECT id FROM users", []}).body\
              """
     end
 

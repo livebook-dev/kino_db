@@ -220,8 +220,11 @@ defmodule KinoDB.SQLCell do
     end
   end
 
-  defp query_opts_args(%{"timeout" => timeout}) when timeout != nil,
-    do: [[timeout: timeout * 1000]]
+  @connection_types_with_timeout ~w|postgres mysql|
+
+  defp query_opts_args(%{"connection" => %{"type" => type}, "timeout" => timeout})
+       when timeout != nil and type in @connection_types_with_timeout,
+       do: [[timeout: timeout * 1000]]
 
   defp query_opts_args(%{"connection" => %{"type" => "athena"}, "cache_query" => cache_query}),
     do: [[cache_query: cache_query]]
