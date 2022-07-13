@@ -29,7 +29,7 @@ defmodule KinoDB.ConnectionCell do
       "access_key_id" => attrs["access_key_id"] || "",
       "secret_access_key" => attrs["secret_access_key"] || "",
       "token" => attrs["token"] || "",
-      "region" => attrs["region"] || "",
+      "region" => attrs["region"] || "us-east-1",
       "workgroup" => attrs["workgroup"] || "",
       "output_location" => attrs["output_location"] || ""
     }
