@@ -314,7 +314,7 @@ defmodule KinoDB.ConnectionCell do
 
   defp missing_dep(%{"type" => "athena"}) do
     unless Code.ensure_loaded?(ReqAthena) do
-      ~s|{:req_athena, "~> 0.1.0"}|
+      ~s|{:req_athena, "~> 0.1.1"}|
     end
   end
 
