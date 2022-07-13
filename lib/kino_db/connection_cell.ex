@@ -28,7 +28,9 @@ defmodule KinoDB.ConnectionCell do
       "credentials" => attrs["credentials"] || %{},
       "access_key_id" => attrs["access_key_id"] || "",
       "secret_access_key" => attrs["secret_access_key"] || "",
+      "token" => attrs["token"] || "",
       "region" => attrs["region"] || "",
+      "workgroup" => attrs["workgroup"] || "",
       "output_location" => attrs["output_location"] || ""
     }
 
@@ -105,13 +107,14 @@ defmodule KinoDB.ConnectionCell do
     connection_keys =
       case fields["type"] do
         "sqlite" ->
-          ["database_path"]
+          ~w|database_path|
 
         "bigquery" ->
           ~w|project_id default_dataset_id credentials|
 
         "athena" ->
-          ~w|access_key_id secret_access_key region output_location database|
+          ~w|access_key_id secret_access_key token region
+             workgroup output_location database|
 
         type when type in ["postgres", "mysql"] ->
           ~w|database hostname port username password|
@@ -127,21 +130,28 @@ defmodule KinoDB.ConnectionCell do
     required_keys =
       case attrs["type"] do
         "sqlite" ->
-          ["database_path"]
+          ~w|database_path|
 
         "bigquery" ->
           ~w|project_id|
 
         "athena" ->
           if Code.ensure_loaded?(:aws_credentials),
-            do: ~w|output_location database|,
-            else: ~w|access_key_id secret_access_key region output_location database|
+            do: ~w|database|,
+            else: ~w|access_key_id secret_access_key region database|
 
         type when type in ["postgres", "mysql"] ->
           ~w|hostname port|
       end
 
-    if required_fields_filled?(attrs, required_keys) do
+    conditional_keys =
+      case attrs["type"] do
+        "athena" -> ~w|workgroup output_location|
+        _ -> []
+      end
+
+    if required_fields_filled?(attrs, required_keys) and
+         conditional_fields_filled?(attrs, conditional_keys) do
       attrs |> to_quoted() |> Kino.SmartCell.quoted_to_string()
     else
       ""
@@ -150,6 +160,12 @@ defmodule KinoDB.ConnectionCell do
 
   defp required_fields_filled?(attrs, keys) do
     not Enum.any?(keys, fn key -> attrs[key] in [nil, ""] end)
+  end
+
+  defp conditional_fields_filled?(_, []), do: true
+
+  defp conditional_fields_filled?(attrs, keys) do
+    not Enum.all?(keys, fn key -> attrs[key] in [nil, ""] end)
   end
 
   defp to_quoted(%{"type" => "sqlite"} = attrs) do

@@ -184,11 +184,31 @@ defmodule KinoDB.ConnectionCellTest do
                    database: "default",
                    output_location: "s3://my-bucket",
                    region: "region",
-                   secret_access_key: "secret"
+                   secret_access_key: "secret",
+                   token: "",
+                   workgroup: ""
                  )
 
                :ok\
                """
+    end
+
+    test "doesn't restore source code with empty conditional fields" do
+      attrs = %{
+        "variable" => "db",
+        "type" => "athena",
+        "access_key_id" => "id",
+        "secret_access_key" => "secret",
+        "region" => "region",
+        "database" => "default",
+        "token" => "token",
+        "workgroup" => "",
+        "output_location" => ""
+      }
+
+      {_kino, source} = start_smart_cell!(ConnectionCell, attrs)
+
+      assert source == ""
     end
 
     test "doesn't restore source code with empty required fields" do
