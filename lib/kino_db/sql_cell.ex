@@ -17,7 +17,8 @@ defmodule KinoDB.SQLCell do
             %{variable: conn_attrs["variable"], type: conn_attrs["type"]}
           end,
         result_variable: Kino.SmartCell.prefixed_var_name("result", attrs["result_variable"]),
-        timeout: attrs["timeout"]
+        timeout: attrs["timeout"],
+        cache_query: attrs["cache_query"] || true
       )
 
     {:ok, ctx, editor: [attribute: "query", language: "sql", default_source: @default_query]}
@@ -29,7 +30,8 @@ defmodule KinoDB.SQLCell do
       connections: ctx.assigns.connections,
       connection: ctx.assigns.connection,
       result_variable: ctx.assigns.result_variable,
-      timeout: ctx.assigns.timeout
+      timeout: ctx.assigns.timeout,
+      cache_query: ctx.assigns.cache_query
     }
 
     {:ok, payload, ctx}
@@ -65,6 +67,12 @@ defmodule KinoDB.SQLCell do
 
     ctx = assign(ctx, timeout: timeout)
     broadcast_event(ctx, "update_timeout", timeout)
+    {:noreply, ctx}
+  end
+
+  def handle_event("update_cache_query", cache_query?, ctx) do
+    ctx = assign(ctx, cache_query: cache_query?)
+    broadcast_event(ctx, "update_cache_query", cache_query?)
     {:noreply, ctx}
   end
 
@@ -136,7 +144,8 @@ defmodule KinoDB.SQLCell do
           %{"variable" => connection.variable, "type" => connection.type}
         end,
       "result_variable" => ctx.assigns.result_variable,
-      "timeout" => ctx.assigns.timeout
+      "timeout" => ctx.assigns.timeout,
+      "cache_query" => ctx.assigns.cache_query
     }
   end
 
@@ -211,8 +220,14 @@ defmodule KinoDB.SQLCell do
     end
   end
 
-  defp query_opts_args(%{"timeout" => timeout}) when timeout != nil,
-    do: [[timeout: timeout * 1000]]
+  @connection_types_with_timeout ~w|postgres mysql|
+
+  defp query_opts_args(%{"connection" => %{"type" => type}, "timeout" => timeout})
+       when timeout != nil and type in @connection_types_with_timeout,
+       do: [[timeout: timeout * 1000]]
+
+  defp query_opts_args(%{"connection" => %{"type" => "athena"}, "cache_query" => cache_query}),
+    do: [[cache_query: cache_query]]
 
   defp query_opts_args(_attrs), do: []
 

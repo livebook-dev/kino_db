@@ -300,15 +300,50 @@ defmodule KinoDB.SQLCellTest do
              """
 
       assert SQLCell.to_source(put_in(attrs["connection"]["type"], "sqlite")) == """
-             result = Exqlite.query!(conn, "SELECT id FROM users", [], timeout: 30000)\
+             result = Exqlite.query!(conn, "SELECT id FROM users", [])\
              """
 
       assert SQLCell.to_source(put_in(attrs["connection"]["type"], "bigquery")) == """
-             result = Req.post!(conn, bigquery: {"SELECT id FROM users", []}, timeout: 30000).body\
+             result = Req.post!(conn, bigquery: {"SELECT id FROM users", []}).body\
              """
 
       assert SQLCell.to_source(put_in(attrs["connection"]["type"], "athena")) == """
-             result = Req.post!(conn, athena: {"SELECT id FROM users", []}, timeout: 30000).body\
+             result = Req.post!(conn, athena: {"SELECT id FROM users", []}).body\
+             """
+    end
+
+    test "passes cache_query option when supported" do
+      attrs = %{
+        "connection" => %{"variable" => "conn", "type" => "postgres"},
+        "result_variable" => "result",
+        "cache_query" => true,
+        "query" => "SELECT id FROM users"
+      }
+
+      assert SQLCell.to_source(attrs) == """
+             result = Postgrex.query!(conn, "SELECT id FROM users", [])\
+             """
+
+      assert SQLCell.to_source(put_in(attrs["connection"]["type"], "mysql")) == """
+             result = MyXQL.query!(conn, "SELECT id FROM users", [])\
+             """
+
+      assert SQLCell.to_source(put_in(attrs["connection"]["type"], "sqlite")) == """
+             result = Exqlite.query!(conn, "SELECT id FROM users", [])\
+             """
+
+      assert SQLCell.to_source(put_in(attrs["connection"]["type"], "bigquery")) == """
+             result = Req.post!(conn, bigquery: {"SELECT id FROM users", []}).body\
+             """
+
+      athena = put_in(attrs["connection"]["type"], "athena")
+
+      assert SQLCell.to_source(put_in(athena["cache_query"], true)) == """
+             result = Req.post!(conn, athena: {"SELECT id FROM users", []}, cache_query: true).body\
+             """
+
+      assert SQLCell.to_source(put_in(athena["cache_query"], false)) == """
+             result = Req.post!(conn, athena: {"SELECT id FROM users", []}, cache_query: false).body\
              """
     end
   end

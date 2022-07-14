@@ -81,7 +81,6 @@ button {
 .field {
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
 }
 
 .inline-field {
@@ -102,7 +101,6 @@ button {
 
 .help-box {
   padding: 16px;
-  white-space: pre-wrap;
   font-weight: 500;
   font-size: 0.875rem;
   background-color: var(--gray-100);
@@ -151,7 +149,6 @@ button {
 
 .grow {
   flex-grow: 1;
-  flex-shrink: 3;
 }
 
 select.input {
@@ -185,4 +182,90 @@ select.input {
 .strong {
   color: var(--gray-600);
   padding-left: 0;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  padding: 8px 16px;
+  gap: 8px;
+}
+
+.help-box .row {
+  display: flex;
+  align-items: stretch;
+  justify-content: flex-start;
+  padding: 0px;
+  gap: 16px;
+}
+
+@media only screen and (max-width: 750px) {
+  .mixed-row .field {
+    max-width: 32%;
+  }
+}
+
+/* Switch */
+
+.switch-button {
+  margin-top: 3px;
+  display: inline-block;
+  height: 1.75rem;
+  margin-right: 0.5rem;
+  position: relative;
+  transition-duration: 0.15s;
+  transition-property: color, background-color, border-color, fill, stroke,
+    opacity, box-shadow, transform, filter, -webkit-text-decoration-color,
+    -webkit-backdrop-filter;
+  transition-property: color, background-color, border-color,
+    text-decoration-color, fill, stroke, opacity, box-shadow, transform, filter,
+    backdrop-filter;
+  transition-property: color, background-color, border-color,
+    text-decoration-color, fill, stroke, opacity, box-shadow, transform, filter,
+    backdrop-filter, -webkit-text-decoration-color, -webkit-backdrop-filter;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+  width: 3.5rem;
+}
+
+.switch-checkbox {
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  background-color: rgb(145 164 183);
+  border-color: rgb(240 245 249);
+  border-width: 5px;
+  height: 1.25rem;
+  position: absolute;
+  width: 1.45rem;
+  top: 1px;
+}
+
+.switch-button-bg,
+.switch-checkbox {
+  border-radius: 9999px;
+  cursor: pointer;
+  display: block;
+  transition-duration: 0.3s;
+  transition-property: all;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.switch-button-bg {
+  background-color: var(--gray-200);
+  height: 100%;
+  width: 100%;
+}
+
+.switch-checkbox:checked {
+  background-color: rgb(255 255 255);
+  border-color: rgb(62 100 255);
+  transform: translateX(100%);
+}
+
+.switch-checkbox:checked + .switch-button-bg {
+  background-color: rgb(62 100 255);
 }
