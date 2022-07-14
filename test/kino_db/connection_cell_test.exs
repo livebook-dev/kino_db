@@ -7,6 +7,38 @@ defmodule KinoDB.ConnectionCellTest do
 
   setup :configure_livebook_bridge
 
+  @attrs %{
+    "variable" => "db",
+    "type" => "postgres",
+    "hostname" => "localhost",
+    "port" => 4444,
+    "username" => "admin",
+    "password" => "pass",
+    "database" => "default",
+    "database_path" => "/path/to/sqlite3.db",
+    "project_id" => "foo",
+    "credentials" => %{},
+    "default_dataset_id" => "",
+    "access_key_id" => "id",
+    "secret_access_key" => "secret",
+    "token" => "token",
+    "region" => "region",
+    "output_location" => "s3://my-bucket",
+    "workgroup" => "primary"
+  }
+
+  @empty_required_fields %{
+    "variable" => "db",
+    "type" => "postgres",
+    "hostname" => "",
+    "port" => nil,
+    "database_path" => "",
+    "project_id" => "",
+    "access_key_id" => "",
+    "secret_access_key" => "",
+    "region" => ""
+  }
+
   describe "initialization" do
     test "returns default source when started with missing attrs" do
       {_kino, source} = start_smart_cell!(ConnectionCell, %{"variable" => "conn"})
@@ -29,27 +61,7 @@ defmodule KinoDB.ConnectionCellTest do
 
   describe "code generation" do
     test "restores source code from attrs" do
-      attrs = %{
-        "variable" => "db",
-        "type" => "postgres",
-        "hostname" => "localhost",
-        "port" => 4444,
-        "username" => "admin",
-        "password" => "pass",
-        "database" => "default",
-        "database_path" => "/path/to/sqlite3.db",
-        "project_id" => "foo",
-        "credentials" => %{},
-        "default_dataset_id" => "",
-        "access_key_id" => "id",
-        "secret_access_key" => "secret",
-        "token" => "token",
-        "region" => "region",
-        "output_location" => "s3://my-bucket",
-        "workgroup" => "primary"
-      }
-
-      assert ConnectionCell.to_source(attrs) === ~s'''
+      assert ConnectionCell.to_source(@attrs) === ~s'''
              opts = [
                hostname: "localhost",
                port: 4444,
@@ -62,7 +74,7 @@ defmodule KinoDB.ConnectionCellTest do
              {:ok, db} = Kino.start_child({Postgrex, opts})\
              '''
 
-      assert ConnectionCell.to_source(put_in(attrs["type"], "mysql")) == ~s'''
+      assert ConnectionCell.to_source(put_in(@attrs["type"], "mysql")) == ~s'''
              opts = [
                hostname: "localhost",
                port: 4444,
@@ -75,12 +87,12 @@ defmodule KinoDB.ConnectionCellTest do
              {:ok, db} = Kino.start_child({MyXQL, opts})\
              '''
 
-      assert ConnectionCell.to_source(put_in(attrs["type"], "sqlite")) == ~s'''
+      assert ConnectionCell.to_source(put_in(@attrs["type"], "sqlite")) == ~s'''
              opts = [database: "/path/to/sqlite3.db"]
              {:ok, db} = Kino.start_child({Exqlite, opts})\
              '''
 
-      assert ConnectionCell.to_source(put_in(attrs["type"], "bigquery")) == ~s'''
+      assert ConnectionCell.to_source(put_in(@attrs["type"], "bigquery")) == ~s'''
              opts = [name: ReqBigQuery.Goth, http_client: &Req.request/1]
              {:ok, _pid} = Kino.start_child({Goth, opts})
 
@@ -91,7 +103,7 @@ defmodule KinoDB.ConnectionCellTest do
              :ok\
              '''
 
-      assert ConnectionCell.to_source(put_in(attrs["type"], "athena")) == ~s'''
+      assert ConnectionCell.to_source(put_in(@attrs["type"], "athena")) == ~s'''
              db =
                Req.new(http_errors: :raise)
                |> ReqAthena.attach(
@@ -108,32 +120,16 @@ defmodule KinoDB.ConnectionCellTest do
              '''
     end
 
-    test "doesn't restore source code with empty required fields" do
-      attrs = %{
-        "variable" => "db",
-        "type" => "postgres",
-        "hostname" => "localhost",
-        "port" => nil,
-        "username" => "admin",
-        "password" => "pass",
-        "database" => "default"
-      }
-
-      assert ConnectionCell.to_source(attrs) == ""
+    test "generates empty source code when all required fields are missing" do
+      assert ConnectionCell.to_source(put_in(@empty_required_fields["type"], "postgres")) == ""
+      assert ConnectionCell.to_source(put_in(@empty_required_fields["type"], "mysql")) == ""
+      assert ConnectionCell.to_source(put_in(@empty_required_fields["type"], "sqlite")) == ""
+      assert ConnectionCell.to_source(put_in(@empty_required_fields["type"], "bigquery")) == ""
+      assert ConnectionCell.to_source(put_in(@empty_required_fields["type"], "athena")) == ""
     end
 
-    test "doesn't restore source code with empty conditional fields" do
-      attrs = %{
-        "variable" => "db",
-        "type" => "postgres",
-        "database" => "default",
-        "access_key_id" => "id",
-        "secret_access_key" => "secret",
-        "token" => "token",
-        "region" => "region",
-        "output_location" => "",
-        "workgroup" => ""
-      }
+    test "generates empty source code when all conditional fields are missing" do
+      attrs = Map.merge(@attrs, %{"type" => "athena", "workgroup" => "", "output_location" => ""})
 
       assert ConnectionCell.to_source(attrs) == ""
     end
