@@ -27,89 +27,116 @@ defmodule KinoDB.ConnectionCellTest do
     end
   end
 
-  test "restores source code from attrs" do
-    attrs = %{
-      "variable" => "db",
-      "type" => "postgres",
-      "hostname" => "localhost",
-      "port" => 4444,
-      "username" => "admin",
-      "password" => "pass",
-      "database" => "default",
-      "database_path" => "/path/to/sqlite3.db",
-      "project_id" => "foo",
-      "credentials" => %{},
-      "default_dataset_id" => "",
-      "access_key_id" => "id",
-      "secret_access_key" => "secret",
-      "token" => "token",
-      "region" => "region",
-      "output_location" => "s3://my-bucket",
-      "workgroup" => "primary"
-    }
+  describe "code generation" do
+    test "restores source code from attrs" do
+      attrs = %{
+        "variable" => "db",
+        "type" => "postgres",
+        "hostname" => "localhost",
+        "port" => 4444,
+        "username" => "admin",
+        "password" => "pass",
+        "database" => "default",
+        "database_path" => "/path/to/sqlite3.db",
+        "project_id" => "foo",
+        "credentials" => %{},
+        "default_dataset_id" => "",
+        "access_key_id" => "id",
+        "secret_access_key" => "secret",
+        "token" => "token",
+        "region" => "region",
+        "output_location" => "s3://my-bucket",
+        "workgroup" => "primary"
+      }
 
-    conditional_attrs = Map.merge(attrs, %{"workgroup" => "", "output_location" => ""})
-
-    assert ConnectionCell.to_source(attrs) === ~s'''
-           opts = [
-             hostname: "localhost",
-             port: 4444,
-             username: "admin",
-             password: "pass",
-             database: "default",
-             socket_options: [:inet6]
-           ]
-
-           {:ok, db} = Kino.start_child({Postgrex, opts})\
-           '''
-
-    assert ConnectionCell.to_source(put_in(attrs["type"], "mysql")) == ~s'''
-           opts = [
-             hostname: "localhost",
-             port: 4444,
-             username: "admin",
-             password: "pass",
-             database: "default",
-             socket_options: [:inet6]
-           ]
-
-           {:ok, db} = Kino.start_child({MyXQL, opts})\
-           '''
-
-    assert ConnectionCell.to_source(put_in(attrs["type"], "sqlite")) == ~s'''
-           opts = [database: "/path/to/sqlite3.db"]
-           {:ok, db} = Kino.start_child({Exqlite, opts})\
-           '''
-
-    assert ConnectionCell.to_source(put_in(attrs["type"], "bigquery")) == ~s'''
-           opts = [name: ReqBigQuery.Goth, http_client: &Req.request/1]
-           {:ok, _pid} = Kino.start_child({Goth, opts})
-
-           db =
-             Req.new(http_errors: :raise)
-             |> ReqBigQuery.attach(goth: ReqBigQuery.Goth, project_id: "foo", default_dataset_id: "")
-
-           :ok\
-           '''
-
-    assert ConnectionCell.to_source(put_in(attrs["type"], "athena")) == ~s'''
-           db =
-             Req.new(http_errors: :raise)
-             |> ReqAthena.attach(
-               access_key_id: "id",
+      assert ConnectionCell.to_source(attrs) === ~s'''
+             opts = [
+               hostname: "localhost",
+               port: 4444,
+               username: "admin",
+               password: "pass",
                database: "default",
-               output_location: "s3://my-bucket",
-               region: "region",
-               secret_access_key: "secret",
-               token: "token",
-               workgroup: "primary"
-             )
+               socket_options: [:inet6]
+             ]
 
-           :ok\
-           '''
+             {:ok, db} = Kino.start_child({Postgrex, opts})\
+             '''
 
-    assert ConnectionCell.to_source(put_in(attrs["port"], nil)) == ""
-    assert ConnectionCell.to_source(put_in(conditional_attrs["type"], "athena")) == ""
+      assert ConnectionCell.to_source(put_in(attrs["type"], "mysql")) == ~s'''
+             opts = [
+               hostname: "localhost",
+               port: 4444,
+               username: "admin",
+               password: "pass",
+               database: "default",
+               socket_options: [:inet6]
+             ]
+
+             {:ok, db} = Kino.start_child({MyXQL, opts})\
+             '''
+
+      assert ConnectionCell.to_source(put_in(attrs["type"], "sqlite")) == ~s'''
+             opts = [database: "/path/to/sqlite3.db"]
+             {:ok, db} = Kino.start_child({Exqlite, opts})\
+             '''
+
+      assert ConnectionCell.to_source(put_in(attrs["type"], "bigquery")) == ~s'''
+             opts = [name: ReqBigQuery.Goth, http_client: &Req.request/1]
+             {:ok, _pid} = Kino.start_child({Goth, opts})
+
+             db =
+               Req.new(http_errors: :raise)
+               |> ReqBigQuery.attach(goth: ReqBigQuery.Goth, project_id: "foo", default_dataset_id: "")
+
+             :ok\
+             '''
+
+      assert ConnectionCell.to_source(put_in(attrs["type"], "athena")) == ~s'''
+             db =
+               Req.new(http_errors: :raise)
+               |> ReqAthena.attach(
+                 access_key_id: "id",
+                 database: "default",
+                 output_location: "s3://my-bucket",
+                 region: "region",
+                 secret_access_key: "secret",
+                 token: "token",
+                 workgroup: "primary"
+               )
+
+             :ok\
+             '''
+    end
+
+    test "doesn't restore source code with empty required fields" do
+      attrs = %{
+        "variable" => "db",
+        "type" => "postgres",
+        "hostname" => "localhost",
+        "port" => nil,
+        "username" => "admin",
+        "password" => "pass",
+        "database" => "default"
+      }
+
+      assert ConnectionCell.to_source(attrs) == ""
+    end
+
+    test "doesn't restore source code with empty conditional fields" do
+      attrs = %{
+        "variable" => "db",
+        "type" => "postgres",
+        "database" => "default",
+        "access_key_id" => "id",
+        "secret_access_key" => "secret",
+        "token" => "token",
+        "region" => "region",
+        "output_location" => "",
+        "workgroup" => ""
+      }
+
+      assert ConnectionCell.to_source(attrs) == ""
+    end
   end
 
   test "when a field changes, broadcasts the change and sends source update" do
