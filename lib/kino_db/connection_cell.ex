@@ -34,14 +34,15 @@ defmodule KinoDB.ConnectionCell do
       "output_location" => attrs["output_location"] || ""
     }
 
-    assigns = [
-      fields: fields,
-      missing_dep: missing_dep(fields),
-      help_box: help_box(fields),
-      has_aws_credentials: Code.ensure_loaded?(:aws_credentials)
-    ]
+    ctx =
+      assign(ctx,
+        fields: fields,
+        missing_dep: missing_dep(fields),
+        help_box: help_box(fields),
+        has_aws_credentials: Code.ensure_loaded?(:aws_credentials)
+      )
 
-    {:ok, assign(ctx, assigns)}
+    {:ok, ctx}
   end
 
   @impl true
@@ -100,7 +101,7 @@ defmodule KinoDB.ConnectionCell do
 
   defp to_updates(_fields, field, value), do: %{field => value}
 
-  @default_keys ["type", "variable", "_keys_"]
+  @default_keys ["type", "variable"]
 
   @impl true
   def to_attrs(%{assigns: %{fields: fields}}) do
@@ -120,9 +121,7 @@ defmodule KinoDB.ConnectionCell do
           ~w|database hostname port username password|
       end
 
-    fields
-    |> Map.put("_keys_", connection_keys)
-    |> Map.take(@default_keys ++ connection_keys)
+    Map.take(fields, @default_keys ++ connection_keys)
   end
 
   @impl true
@@ -150,22 +149,22 @@ defmodule KinoDB.ConnectionCell do
         _ -> []
       end
 
-    if required_fields_filled?(attrs, required_keys) and
-         conditional_fields_filled?(attrs, conditional_keys) do
+    if all_fields_filled?(attrs, required_keys) and
+         any_fields_filled?(attrs, conditional_keys) do
       attrs |> to_quoted() |> Kino.SmartCell.quoted_to_string()
     else
       ""
     end
   end
 
-  defp required_fields_filled?(attrs, keys) do
+  defp all_fields_filled?(attrs, keys) do
     not Enum.any?(keys, fn key -> attrs[key] in [nil, ""] end)
   end
 
-  defp conditional_fields_filled?(_, []), do: true
+  defp any_fields_filled?(_, []), do: true
 
-  defp conditional_fields_filled?(attrs, keys) do
-    not Enum.all?(keys, fn key -> attrs[key] in [nil, ""] end)
+  defp any_fields_filled?(attrs, keys) do
+    Enum.any?(keys, fn key -> attrs[key] not in [nil, ""] end)
   end
 
   defp to_quoted(%{"type" => "sqlite"} = attrs) do

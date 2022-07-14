@@ -312,7 +312,7 @@ defmodule KinoDB.SQLCellTest do
              """
     end
 
-    test "passes cache_query option when a connection type is specified" do
+    test "passes cache_query option when supported" do
       attrs = %{
         "connection" => %{"variable" => "conn", "type" => "postgres"},
         "result_variable" => "result",
