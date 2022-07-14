@@ -25,207 +25,91 @@ defmodule KinoDB.ConnectionCellTest do
                {:ok, conn} = Kino.start_child({Postgrex, opts})\
                """
     end
+  end
 
-    test "restores source code from attrs" do
-      attrs = %{
-        "variable" => "db",
-        "type" => "mysql",
-        "hostname" => "localhost",
-        "port" => 4444,
-        "username" => "admin",
-        "password" => "pass",
-        "database" => "default"
-      }
+  test "restores source code from attrs" do
+    attrs = %{
+      "variable" => "db",
+      "type" => "postgres",
+      "hostname" => "localhost",
+      "port" => 4444,
+      "username" => "admin",
+      "password" => "pass",
+      "database" => "default",
+      "database_path" => "/path/to/sqlite3.db",
+      "project_id" => "foo",
+      "credentials" => %{},
+      "default_dataset_id" => "",
+      "access_key_id" => "id",
+      "secret_access_key" => "secret",
+      "token" => "token",
+      "region" => "region",
+      "output_location" => "s3://my-bucket",
+      "workgroup" => "primary"
+    }
 
-      {_kino, source} = start_smart_cell!(ConnectionCell, attrs)
+    conditional_attrs = Map.merge(attrs, %{"workgroup" => "", "output_location" => ""})
 
-      assert source ==
-               """
-               opts = [
-                 hostname: "localhost",
-                 port: 4444,
-                 username: "admin",
-                 password: "pass",
-                 database: "default",
-                 socket_options: [:inet6]
-               ]
+    assert ConnectionCell.to_source(attrs) === ~s'''
+           opts = [
+             hostname: "localhost",
+             port: 4444,
+             username: "admin",
+             password: "pass",
+             database: "default",
+             socket_options: [:inet6]
+           ]
 
-               {:ok, db} = Kino.start_child({MyXQL, opts})\
-               """
-    end
+           {:ok, db} = Kino.start_child({Postgrex, opts})\
+           '''
 
-    test "restores source code from attrs with SQLite3" do
-      attrs = %{
-        "variable" => "db",
-        "type" => "sqlite",
-        "database_path" => "/path/to/sqlite3.db"
-      }
+    assert ConnectionCell.to_source(put_in(attrs["type"], "mysql")) == ~s'''
+           opts = [
+             hostname: "localhost",
+             port: 4444,
+             username: "admin",
+             password: "pass",
+             database: "default",
+             socket_options: [:inet6]
+           ]
 
-      {_kino, source} = start_smart_cell!(ConnectionCell, attrs)
+           {:ok, db} = Kino.start_child({MyXQL, opts})\
+           '''
 
-      assert source ==
-               """
-               opts = [database: "/path/to/sqlite3.db"]
-               {:ok, db} = Kino.start_child({Exqlite, opts})\
-               """
-    end
+    assert ConnectionCell.to_source(put_in(attrs["type"], "sqlite")) == ~s'''
+           opts = [database: "/path/to/sqlite3.db"]
+           {:ok, db} = Kino.start_child({Exqlite, opts})\
+           '''
 
-    test "restores source code from attrs with BigQuery" do
-      attrs = %{
-        "variable" => "db",
-        "type" => "bigquery",
-        "project_id" => "foo",
-        "credentials" => %{},
-        "default_dataset_id" => ""
-      }
+    assert ConnectionCell.to_source(put_in(attrs["type"], "bigquery")) == ~s'''
+           opts = [name: ReqBigQuery.Goth, http_client: &Req.request/1]
+           {:ok, _pid} = Kino.start_child({Goth, opts})
 
-      {_kino, source} = start_smart_cell!(ConnectionCell, attrs)
+           db =
+             Req.new(http_errors: :raise)
+             |> ReqBigQuery.attach(goth: ReqBigQuery.Goth, project_id: "foo", default_dataset_id: "")
 
-      assert source ==
-               """
-               opts = [name: ReqBigQuery.Goth, http_client: &Req.request/1]
-               {:ok, _pid} = Kino.start_child({Goth, opts})
+           :ok\
+           '''
 
-               db =
-                 Req.new(http_errors: :raise)
-                 |> ReqBigQuery.attach(goth: ReqBigQuery.Goth, project_id: "foo", default_dataset_id: "")
+    assert ConnectionCell.to_source(put_in(attrs["type"], "athena")) == ~s'''
+           db =
+             Req.new(http_errors: :raise)
+             |> ReqAthena.attach(
+               access_key_id: "id",
+               database: "default",
+               output_location: "s3://my-bucket",
+               region: "region",
+               secret_access_key: "secret",
+               token: "token",
+               workgroup: "primary"
+             )
 
-               :ok\
-               """
+           :ok\
+           '''
 
-      credentials = %{
-        "private_key" => "foo",
-        "client_email" => "alice@example.com",
-        "token_uri" => "/",
-        "type" => "service_account"
-      }
-
-      {_kino, source} =
-        start_smart_cell!(ConnectionCell, put_in(attrs["credentials"], credentials))
-
-      assert source ==
-               """
-               credentials = %{
-                 "client_email" => "alice@example.com",
-                 "private_key" => "foo",
-                 "token_uri" => "/",
-                 "type" => "service_account"
-               }
-
-               opts = [
-                 name: ReqBigQuery.Goth,
-                 http_client: &Req.request/1,
-                 source: {:service_account, credentials}
-               ]
-
-               {:ok, _pid} = Kino.start_child({Goth, opts})
-
-               db =
-                 Req.new(http_errors: :raise)
-                 |> ReqBigQuery.attach(goth: ReqBigQuery.Goth, project_id: "foo", default_dataset_id: "")
-
-               :ok\
-               """
-
-      credentials = %{
-        "refresh_token" => "foo",
-        "client_id" => "alice@example.com",
-        "client_secret" => "bar",
-        "type" => "authorized_user"
-      }
-
-      {_kino, source} =
-        start_smart_cell!(ConnectionCell, put_in(attrs["credentials"], credentials))
-
-      assert source ==
-               """
-               credentials = %{
-                 "client_id" => "alice@example.com",
-                 "client_secret" => "bar",
-                 "refresh_token" => "foo",
-                 "type" => "authorized_user"
-               }
-
-               opts = [
-                 name: ReqBigQuery.Goth,
-                 http_client: &Req.request/1,
-                 source: {:refresh_token, credentials}
-               ]
-
-               {:ok, _pid} = Kino.start_child({Goth, opts})
-
-               db =
-                 Req.new(http_errors: :raise)
-                 |> ReqBigQuery.attach(goth: ReqBigQuery.Goth, project_id: "foo", default_dataset_id: "")
-
-               :ok\
-               """
-    end
-
-    test "restores source code from attrs with Athena" do
-      attrs = %{
-        "variable" => "db",
-        "type" => "athena",
-        "access_key_id" => "id",
-        "secret_access_key" => "secret",
-        "region" => "region",
-        "database" => "default",
-        "output_location" => "s3://my-bucket"
-      }
-
-      {_kino, source} = start_smart_cell!(ConnectionCell, attrs)
-
-      assert source ==
-               """
-               db =
-                 Req.new(http_errors: :raise)
-                 |> ReqAthena.attach(
-                   access_key_id: "id",
-                   database: "default",
-                   output_location: "s3://my-bucket",
-                   region: "region",
-                   secret_access_key: "secret",
-                   token: "",
-                   workgroup: ""
-                 )
-
-               :ok\
-               """
-    end
-
-    test "doesn't restore source code with empty conditional fields" do
-      attrs = %{
-        "variable" => "db",
-        "type" => "athena",
-        "access_key_id" => "id",
-        "secret_access_key" => "secret",
-        "region" => "region",
-        "database" => "default",
-        "token" => "token",
-        "workgroup" => "",
-        "output_location" => ""
-      }
-
-      {_kino, source} = start_smart_cell!(ConnectionCell, attrs)
-
-      assert source == ""
-    end
-
-    test "doesn't restore source code with empty required fields" do
-      attrs = %{
-        "variable" => "db",
-        "type" => "mysql",
-        "hostname" => "",
-        "port" => nil,
-        "username" => "admin",
-        "password" => "pass",
-        "database" => "default"
-      }
-
-      {_kino, source} = start_smart_cell!(ConnectionCell, attrs)
-
-      assert source == ""
-    end
+    assert ConnectionCell.to_source(put_in(attrs["port"], nil)) == ""
+    assert ConnectionCell.to_source(put_in(conditional_attrs["type"], "athena")) == ""
   end
 
   test "when a field changes, broadcasts the change and sends source update" do
