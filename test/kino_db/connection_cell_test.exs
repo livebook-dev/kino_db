@@ -120,7 +120,7 @@ defmodule KinoDB.ConnectionCellTest do
              '''
     end
 
-    test "generates empty source code when all required fields are missing" do
+    test "generates empty source code when required fields are missing" do
       assert ConnectionCell.to_source(put_in(@empty_required_fields["type"], "postgres")) == ""
       assert ConnectionCell.to_source(put_in(@empty_required_fields["type"], "mysql")) == ""
       assert ConnectionCell.to_source(put_in(@empty_required_fields["type"], "sqlite")) == ""
