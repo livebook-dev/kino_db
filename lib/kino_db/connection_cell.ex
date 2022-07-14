@@ -342,6 +342,12 @@ defmodule KinoDB.ConnectionCell do
     end
   end
 
+  defp help_box(%{"type" => "athena"}) do
+    if Code.ensure_loaded?(:aws_credentials) do
+      "You must fill in the fields above accordingly or authenticate your machine with AWS CLI authentication."
+    end
+  end
+
   defp help_box(_ctx), do: nil
 
   defp running_on_google_metadata? do
