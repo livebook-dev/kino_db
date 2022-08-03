@@ -39,7 +39,8 @@ defmodule KinoDB.ConnectionCell do
         fields: fields,
         missing_dep: missing_dep(fields),
         help_box: help_box(fields),
-        has_aws_credentials: Code.ensure_loaded?(:aws_credentials)
+        has_aws_credentials: Code.ensure_loaded?(:aws_credentials),
+        secrets: secrets()
       )
 
     {:ok, ctx}
@@ -51,7 +52,8 @@ defmodule KinoDB.ConnectionCell do
       fields: ctx.assigns.fields,
       missing_dep: ctx.assigns.missing_dep,
       help_box: ctx.assigns.help_box,
-      has_aws_credentials: ctx.assigns.has_aws_credentials
+      has_aws_credentials: ctx.assigns.has_aws_credentials,
+      secrets: ctx.assigns.secrets
     }
 
     {:ok, payload, ctx}
@@ -355,5 +357,10 @@ defmodule KinoDB.ConnectionCell do
          {:ok, _} <- Mint.HTTP.set_mode(conn, :passive),
          do: true,
          else: (_ -> false)
+  end
+
+  defp secrets() do
+    secrets = System.get_env()
+    Enum.map(secrets, fn {k, v} -> %{"label" => k, "value" => v} end)
   end
 end
