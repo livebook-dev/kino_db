@@ -14,6 +14,7 @@ defmodule KinoDB.ConnectionCellTest do
     "port" => 4444,
     "username" => "admin",
     "password" => "pass",
+    "password_secret" => "",
     "database" => "default",
     "database_path" => "/path/to/sqlite3.db",
     "project_id" => "foo",

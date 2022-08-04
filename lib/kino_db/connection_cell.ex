@@ -22,6 +22,7 @@ defmodule KinoDB.ConnectionCell do
       "port" => attrs["port"] || default_port,
       "username" => attrs["username"] || "",
       "password" => attrs["password"] || "",
+      "password_secret" => attrs["password_secret"] || "",
       "database" => attrs["database"] || "",
       "project_id" => attrs["project_id"] || "",
       "default_dataset_id" => attrs["default_dataset_id"] || "",
@@ -120,7 +121,7 @@ defmodule KinoDB.ConnectionCell do
              workgroup output_location database|
 
         type when type in ["postgres", "mysql"] ->
-          ~w|database hostname port username password|
+          ~w|database hostname port username password password_secret|
       end
 
     Map.take(fields, @default_keys ++ connection_keys)
@@ -269,7 +270,7 @@ defmodule KinoDB.ConnectionCell do
         hostname: unquote(attrs["hostname"]),
         port: unquote(attrs["port"]),
         username: unquote(attrs["username"]),
-        password: unquote(attrs["password"]),
+        password: unquote(quoted_pass(attrs["password_secret"], attrs["password"])),
         database: unquote(attrs["database"]),
         socket_options: [:inet6]
       ]
@@ -277,6 +278,14 @@ defmodule KinoDB.ConnectionCell do
   end
 
   defp quoted_var(string), do: {String.to_atom(string), [], nil}
+
+  defp quoted_pass("", password), do: password
+
+  defp quoted_pass(secret, _) do
+    quote do
+      System.fetch_env!(unquote(secret))
+    end
+  end
 
   defp default_db_type() do
     cond do
@@ -360,7 +369,10 @@ defmodule KinoDB.ConnectionCell do
   end
 
   defp secrets() do
-    secrets = System.get_env()
-    Enum.map(secrets, fn {k, v} -> %{"label" => k, "value" => v} end)
+    System.put_env("LB_FOO", "123")
+    System.put_env("LB_BAR", "123")
+    System.get_env()
+    |> Enum.filter(fn {k, _v} -> String.starts_with?(k, "LB_") end)
+    |> Enum.map(fn {k, _v} -> %{"label" => k, "value" => k} end)
   end
 end
