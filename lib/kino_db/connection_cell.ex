@@ -281,9 +281,9 @@ defmodule KinoDB.ConnectionCell do
 
   defp quoted_pass("", password), do: password
 
-  defp quoted_pass(secret, _) do
+  defp quoted_pass(_, password) do
     quote do
-      System.fetch_env!(unquote(secret))
+      System.fetch_env!(unquote(password))
     end
   end
 
