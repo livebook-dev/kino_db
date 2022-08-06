@@ -34,6 +34,7 @@ defmodule KinoDB.MixProject do
       {:db_connection, "~> 2.4.2", optional: true},
       {:req_bigquery, "~> 0.1.0", optional: true},
       {:req_athena, "~> 0.1.1", optional: true},
+      {:req_snowflake, github: "joshuataylor/req_snowflake", optional: true},
       {:ex_doc, "~> 0.28", only: :dev, runtime: false}
     ]
   end
