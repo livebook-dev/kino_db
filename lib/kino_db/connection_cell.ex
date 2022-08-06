@@ -147,7 +147,7 @@ defmodule KinoDB.ConnectionCell do
             else: ~w|access_key_id secret_access_key region database|
 
         "snowflake" ->
-          ~w|username password account_name database schema region role warehouse|
+          ~w|username password account_name region|
 
         type when type in ["postgres", "mysql"] ->
           ~w|hostname port|
