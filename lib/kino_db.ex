@@ -1,4 +1,4 @@
-results = [Postgrex.Result, MyXQL.Result, Exqlite.Result, ReqBigQuery.Result, ReqAthena.Result]
+results = [Postgrex.Result, MyXQL.Result, Exqlite.Result, ReqBigQuery.Result, ReqAthena.Result, ReqSnowflake.Result]
 
 for mod <- results do
   defimpl Kino.Render, for: mod do

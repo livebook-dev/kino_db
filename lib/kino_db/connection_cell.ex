@@ -31,7 +31,11 @@ defmodule KinoDB.ConnectionCell do
       "token" => attrs["token"] || "",
       "region" => attrs["region"] || "us-east-1",
       "workgroup" => attrs["workgroup"] || "",
-      "output_location" => attrs["output_location"] || ""
+      "output_location" => attrs["output_location"] || "",
+      "schema" => attrs["schema"] || "",
+      "account_name" => attrs["account_name"] || "",
+      "warehouse" => attrs["warehouse"] || "",
+      "role" => attrs["role"] || "",
     }
 
     ctx =
@@ -117,6 +121,9 @@ defmodule KinoDB.ConnectionCell do
           ~w|access_key_id secret_access_key token region
              workgroup output_location database|
 
+        "snowflake" ->
+          ~w|username password account_name database schema region role warehouse|
+
         type when type in ["postgres", "mysql"] ->
           ~w|database hostname port username password|
       end
@@ -138,6 +145,9 @@ defmodule KinoDB.ConnectionCell do
           if Code.ensure_loaded?(:aws_credentials),
             do: ~w|database|,
             else: ~w|access_key_id secret_access_key region database|
+
+        "snowflake" ->
+          ~w|username password account_name database schema region role warehouse|
 
         type when type in ["postgres", "mysql"] ->
           ~w|hostname port|
@@ -261,6 +271,28 @@ defmodule KinoDB.ConnectionCell do
     end
   end
 
+  defp to_quoted(%{"type" => "snowflake"} = attrs) do
+    quote do
+      unquote(quoted_var(attrs["variable"])) =
+        Req.new(http_errors: :raise)
+        |> ReqSnowflake.attach(
+             username: unquote(attrs["username"]),
+             password: unquote(attrs["password"]),
+             database: unquote(attrs["database"]),
+             schema: unquote(attrs["schema"]),
+             region: unquote(attrs["region"]),
+             account_name: unquote(attrs["account_name"]),
+             role: unquote(attrs["role"]),
+             warehouse: unquote(attrs["warehouse"]),
+             arrow: true,
+             table: true,
+             cache_token: true,
+             cache_results: true
+           )
+      :ok
+    end
+  end
+
   defp shared_options(attrs) do
     quote do
       [
@@ -283,6 +315,7 @@ defmodule KinoDB.ConnectionCell do
       Code.ensure_loaded?(Exqlite) -> "sqlite"
       Code.ensure_loaded?(ReqBigQuery) -> "bigquery"
       Code.ensure_loaded?(ReqAthena) -> "athena"
+      Code.ensure_loaded?(ReqSnowflake) -> "snowflake"
       true -> "postgres"
     end
   end
@@ -314,6 +347,12 @@ defmodule KinoDB.ConnectionCell do
   defp missing_dep(%{"type" => "athena"}) do
     unless Code.ensure_loaded?(ReqAthena) do
       ~s|{:req_athena, "~> 0.1.1"}|
+    end
+  end
+
+  defp missing_dep(%{"type" => "snowflake"}) do
+    unless Code.ensure_loaded?(ReqSnowflake) do
+      ~s|{:req_snowflake, github: "joshuataylor/req_snowflake"}|
     end
   end
 

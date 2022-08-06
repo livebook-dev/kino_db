@@ -130,6 +130,7 @@ defmodule KinoDB.SQLCell do
     cond do
       Keyword.has_key?(connection.request_steps, :bigquery_run) -> "bigquery"
       Keyword.has_key?(connection.request_steps, :athena_run) -> "athena"
+      Keyword.has_key?(connection.request_steps, :snowflake_run) -> "snowflake"
       true -> nil
     end
   end
@@ -172,6 +173,10 @@ defmodule KinoDB.SQLCell do
 
   defp to_quoted(%{"connection" => %{"type" => "athena"}} = attrs) do
     to_req_quoted(attrs, fn _n -> "?" end, :athena)
+  end
+
+  defp to_quoted(%{"connection" => %{"type" => "snowflake"}} = attrs) do
+    to_req_quoted(attrs, fn _n -> "?" end, :snowflake_query)
   end
 
   defp to_quoted(_ctx) do
