@@ -15,6 +15,7 @@ defmodule KinoDB.ConnectionCellTest do
     "username" => "admin",
     "password" => "pass",
     "password_secret" => "",
+    "password_from_secret" => "",
     "database" => "default",
     "database_path" => "/path/to/sqlite3.db",
     "project_id" => "foo",

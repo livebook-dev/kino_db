@@ -23,6 +23,7 @@ defmodule KinoDB.ConnectionCell do
       "username" => attrs["username"] || "",
       "password" => attrs["password"] || "",
       "password_secret" => attrs["password_secret"] || "",
+      "password_from_secret" => attrs["password_from_secret"] || "",
       "database" => attrs["database"] || "",
       "project_id" => attrs["project_id"] || "",
       "default_dataset_id" => attrs["default_dataset_id"] || "",
@@ -121,7 +122,7 @@ defmodule KinoDB.ConnectionCell do
              workgroup output_location database|
 
         type when type in ["postgres", "mysql"] ->
-          ~w|database hostname port username password password_secret|
+          ~w|database hostname port username password password_secret password_from_secret|
       end
 
     Map.take(fields, @default_keys ++ connection_keys)
@@ -270,7 +271,7 @@ defmodule KinoDB.ConnectionCell do
         hostname: unquote(attrs["hostname"]),
         port: unquote(attrs["port"]),
         username: unquote(attrs["username"]),
-        password: unquote(quoted_pass(attrs["password_secret"], attrs["password"])),
+        password: unquote(quoted_pass(attrs)),
         database: unquote(attrs["database"]),
         socket_options: [:inet6]
       ]
@@ -279,11 +280,11 @@ defmodule KinoDB.ConnectionCell do
 
   defp quoted_var(string), do: {String.to_atom(string), [], nil}
 
-  defp quoted_pass("", password), do: password
+  defp quoted_pass(%{"password_secret" => "", "password" => password}), do: password
 
-  defp quoted_pass(_, password) do
+  defp quoted_pass(%{"password_from_secret" => secret}) do
     quote do
-      System.fetch_env!(unquote(password))
+      System.fetch_env!(unquote(secret))
     end
   end
 
@@ -369,8 +370,6 @@ defmodule KinoDB.ConnectionCell do
   end
 
   defp secrets() do
-    System.put_env("LB_FOO", "123")
-    System.put_env("LB_BAR", "123")
     System.get_env()
     |> Enum.filter(fn {k, _v} -> String.starts_with?(k, "LB_") end)
     |> Enum.map(fn {k, _v} -> %{"label" => k, "value" => k} end)
