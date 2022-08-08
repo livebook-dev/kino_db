@@ -202,6 +202,10 @@ input::-webkit-inner-spin-button {
   margin: 0;
 }
 
+.unavailable {
+  color: rgba(0, 0, 0, 0.5);
+}
+
 .button {
   padding: 0.5rem 1.25rem;
   color: var(--gray-500);
