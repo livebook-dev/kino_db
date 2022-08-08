@@ -206,40 +206,25 @@ input::-webkit-inner-spin-button {
   color: rgba(0, 0, 0, 0.5);
 }
 
-.button {
-  padding: 0.5rem 1.25rem;
-  color: var(--gray-500);
-  font-size: 0.875rem;
-  line-height: 1.25rem;
-  font-weight: 500;
-  white-space: nowrap;
-  border-radius: 0.5rem;
-  border-width: 1px;
-  border-color: transparent;
-  margin-right: 18px;
-  margin-bottom: 6px;
-  background-color: var(--gray-100);
-}
-
-.button:hover {
-  cursor: pointer;
-  background-color: var(--gray-300);
-}
-
 .button--sm {
   margin: 0;
   padding: 5px;
   background: transparent;
   position: relative;
-  top: 15px
+  top: 14px
 }
 
 .button--sm:hover {
   background: transparent;
+  cursor: pointer;
 }
 
 .button-svg {
   transition-property: all;
   transition-duration: 200ms;
   color: var(--gray-600);
+}
+
+.hidden-checkbox-input {
+  display: none;
 }
