@@ -191,4 +191,36 @@ defmodule KinoDB.ConnectionCellTest do
     {:ok, conn} = Kino.start_child({MyXQL, opts})\
     """)
   end
+
+  test "password from secrets" do
+    {kino, _source} =
+      start_smart_cell!(ConnectionCell, %{
+        "variable" => "conn",
+        "type" => "postgres",
+        "port" => 5432
+      })
+
+    push_event(kino, "update_field", %{"field" => "password_secret", "value" => "true"})
+    assert_broadcast_event(kino, "update", %{"fields" => %{"password_secret" => "true"}})
+
+    push_event(kino, "update_field", %{"field" => "password_from_secret", "value" => "LB_PASS"})
+    assert_broadcast_event(kino, "update", %{"fields" => %{"password_from_secret" => "LB_PASS"}})
+
+    assert_smart_cell_update(
+      kino,
+      %{"password_secret" => "true", "password_from_secret" => "LB_PASS"},
+      """
+      opts = [
+        hostname: "localhost",
+        port: 5432,
+        username: "",
+        password: System.fetch_env!("LB_PASS"),
+        database: "",
+        socket_options: [:inet6]
+      ]
+
+      {:ok, conn} = Kino.start_child({Postgrex, opts})\
+      """
+    )
+  end
 end
