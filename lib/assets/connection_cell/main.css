@@ -252,3 +252,12 @@ input::-webkit-inner-spin-button {
   border-top-right-radius: 0;
   border-bottom-right-radius: 0;
 }
+
+/* Fix icon position - Safari 11+ */
+@media not all and (min-resolution:.001dpcm) {
+  @supports (-webkit-appearance:none) and (stroke-color:transparent) {
+    .icon-container {
+      top: 21px;
+    }
+  }
+}
