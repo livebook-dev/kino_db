@@ -229,14 +229,14 @@ input::-webkit-inner-spin-button {
   display: none;
 }
 
-.icon-input {
+.input-icon {
   width: 100%;
   border: 1px solid var(--gray-200);
   outline: none;
   padding: 8px 12px 8px 42px;
 }
 
-.icon-input-container {
+.input-icon-container {
   position: relative;
 }
 
@@ -245,6 +245,10 @@ input::-webkit-inner-spin-button {
   top: 20px;
   padding: 5px 6px;
   border-right: 1px solid var(--gray-200);
-  width: 25px;
-  height: 25px;
+  width: 22px;
+  height: 24px;
+  background-color: var(--gray-200);
+  border-radius: 0.5rem;
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
 }
