@@ -236,6 +236,10 @@ input::-webkit-inner-spin-button {
   padding: 8px 12px 8px 42px;
 }
 
+.input-icon.unavailable {
+  border-color: var(--red-300)
+}
+
 .input-icon-container {
   position: relative;
 }
@@ -246,18 +250,19 @@ input::-webkit-inner-spin-button {
   padding: 5px 6px;
   border-right: 1px solid var(--gray-200);
   width: 22px;
-  height: 24px;
+  height: 23px;
   background-color: var(--gray-200);
   border-radius: 0.5rem;
   border-top-right-radius: 0;
   border-bottom-right-radius: 0;
+  margin-left: 1px;
 }
 
 /* Fix icon position - Safari 11+ */
 @media not all and (min-resolution:.001dpcm) {
   @supports (-webkit-appearance:none) and (stroke-color:transparent) {
     .icon-container {
-      top: 21px;
+      top: 22px;
     }
   }
 }
