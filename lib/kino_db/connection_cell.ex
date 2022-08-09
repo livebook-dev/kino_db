@@ -122,7 +122,9 @@ defmodule KinoDB.ConnectionCell do
              workgroup output_location database|
 
         type when type in ["postgres", "mysql"] ->
-          ~w|database hostname port username password password_secret password_from_secret|
+          if fields["password_secret"] == "true",
+            do: ~w|database hostname port username password_secret password_from_secret|,
+            else: ~w|database hostname port username password_secret password|
       end
 
     Map.take(fields, @default_keys ++ connection_keys)
@@ -280,7 +282,7 @@ defmodule KinoDB.ConnectionCell do
 
   defp quoted_var(string), do: {String.to_atom(string), [], nil}
 
-  defp quoted_pass(%{"password_secret" => "", "password" => password}), do: password
+  defp quoted_pass(%{"password" => password}), do: password
 
   defp quoted_pass(%{"password_from_secret" => secret}) do
     quote do
