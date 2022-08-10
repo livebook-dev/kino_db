@@ -135,7 +135,7 @@ input[required].empty {
 }
 
 .grow {
-  flex-grow: 1;
+  flex: 1;
 }
 
 .help-box {
@@ -200,4 +200,69 @@ input::-webkit-outer-spin-button,
 input::-webkit-inner-spin-button {
   -webkit-appearance: none;
   margin: 0;
+}
+
+.unavailable {
+  color: rgba(0, 0, 0, 0.5);
+}
+
+.button--sm {
+  margin: 0;
+  padding: 5px;
+  background: transparent;
+  position: relative;
+  top: 14px
+}
+
+.button--sm:hover {
+  background: transparent;
+  cursor: pointer;
+}
+
+.button-svg {
+  transition-property: all;
+  transition-duration: 200ms;
+  color: var(--gray-600);
+}
+
+.hidden-checkbox-input {
+  display: none;
+}
+
+.input-icon {
+  width: 100%;
+  border: 1px solid var(--gray-200);
+  outline: none;
+  padding: 8px 12px 8px 42px;
+}
+
+.input-icon.unavailable {
+  border-color: var(--red-300)
+}
+
+.input-icon-container {
+  position: relative;
+}
+
+.icon-container {
+  position: absolute;
+  top: 20px;
+  padding: 5px 6px;
+  border-right: 1px solid var(--gray-200);
+  width: 22px;
+  height: 23px;
+  background-color: var(--gray-200);
+  border-radius: 0.5rem;
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+  margin-left: 1px;
+}
+
+/* Fix icon position - Safari 11+ */
+@media not all and (min-resolution:.001dpcm) {
+  @supports (-webkit-appearance:none) and (stroke-color:transparent) {
+    .icon-container {
+      top: 22px;
+    }
+  }
 }
