@@ -284,6 +284,8 @@ defmodule KinoDB.ConnectionCell do
 
   defp quoted_pass(%{"password" => password}), do: password
 
+  defp quoted_pass(%{"password_secret" => ""}), do: ""
+
   defp quoted_pass(%{"password_secret" => secret}) do
     quote do
       System.fetch_env!(unquote(secret))
