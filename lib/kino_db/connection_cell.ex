@@ -22,7 +22,7 @@ defmodule KinoDB.ConnectionCell do
       "port" => attrs["port"] || default_port,
       "username" => attrs["username"] || "",
       "password" => attrs["password"] || "",
-      "use_password_secret" => "#{Map.has_key?(attrs, "password_secret")}",
+      "use_password_secret" => Map.has_key?(attrs, "password_secret"),
       "password_secret" => attrs["password_secret"] || "",
       "database" => attrs["database"] || "",
       "project_id" => attrs["project_id"] || "",
@@ -122,7 +122,7 @@ defmodule KinoDB.ConnectionCell do
              workgroup output_location database|
 
         type when type in ["postgres", "mysql"] ->
-          if fields["use_password_secret"] == "true",
+          if fields["use_password_secret"],
             do: ~w|database hostname port username password_secret|,
             else: ~w|database hostname port username password|
       end
