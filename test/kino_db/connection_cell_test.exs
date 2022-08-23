@@ -14,8 +14,8 @@ defmodule KinoDB.ConnectionCellTest do
     "port" => 4444,
     "username" => "admin",
     "password" => "pass",
+    "use_password_secret" => false,
     "password_secret" => "",
-    "password_from_secret" => "",
     "database" => "default",
     "database_path" => "/path/to/sqlite3.db",
     "project_id" => "foo",
@@ -200,15 +200,15 @@ defmodule KinoDB.ConnectionCellTest do
         "port" => 5432
       })
 
-    push_event(kino, "update_field", %{"field" => "password_secret", "value" => "true"})
-    assert_broadcast_event(kino, "update", %{"fields" => %{"password_secret" => "true"}})
+    push_event(kino, "update_field", %{"field" => "use_password_secret", "value" => true})
+    assert_broadcast_event(kino, "update", %{"fields" => %{"use_password_secret" => true}})
 
-    push_event(kino, "update_field", %{"field" => "password_from_secret", "value" => "LB_PASS"})
-    assert_broadcast_event(kino, "update", %{"fields" => %{"password_from_secret" => "LB_PASS"}})
+    push_event(kino, "update_field", %{"field" => "password_secret", "value" => "LB_PASS"})
+    assert_broadcast_event(kino, "update", %{"fields" => %{"password_secret" => "LB_PASS"}})
 
     assert_smart_cell_update(
       kino,
-      %{"password_secret" => "true", "password_from_secret" => "LB_PASS"},
+      %{"password_secret" => "LB_PASS"},
       """
       opts = [
         hostname: "localhost",

@@ -22,8 +22,8 @@ defmodule KinoDB.ConnectionCell do
       "port" => attrs["port"] || default_port,
       "username" => attrs["username"] || "",
       "password" => attrs["password"] || "",
+      "use_password_secret" => Map.has_key?(attrs, "password_secret"),
       "password_secret" => attrs["password_secret"] || "",
-      "password_from_secret" => attrs["password_from_secret"] || "",
       "database" => attrs["database"] || "",
       "project_id" => attrs["project_id"] || "",
       "default_dataset_id" => attrs["default_dataset_id"] || "",
@@ -122,9 +122,9 @@ defmodule KinoDB.ConnectionCell do
              workgroup output_location database|
 
         type when type in ["postgres", "mysql"] ->
-          if fields["password_secret"] == "true",
-            do: ~w|database hostname port username password_secret password_from_secret|,
-            else: ~w|database hostname port username password_secret password|
+          if fields["use_password_secret"],
+            do: ~w|database hostname port username password_secret|,
+            else: ~w|database hostname port username password|
       end
 
     Map.take(fields, @default_keys ++ connection_keys)
@@ -284,7 +284,9 @@ defmodule KinoDB.ConnectionCell do
 
   defp quoted_pass(%{"password" => password}), do: password
 
-  defp quoted_pass(%{"password_from_secret" => secret}) do
+  defp quoted_pass(%{"password_secret" => ""}), do: ""
+
+  defp quoted_pass(%{"password_secret" => secret}) do
     quote do
       System.fetch_env!(unquote(secret))
     end
