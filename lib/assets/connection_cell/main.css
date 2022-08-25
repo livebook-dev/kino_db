@@ -266,3 +266,10 @@ input::-webkit-inner-spin-button {
     }
   }
 }
+
+/* Fix icon border - Firefox */
+@-moz-document url-prefix() {
+  .icon-container {
+     height: 24px;
+  }
+}
