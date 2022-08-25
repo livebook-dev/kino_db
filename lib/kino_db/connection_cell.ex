@@ -376,6 +376,6 @@ defmodule KinoDB.ConnectionCell do
   defp secrets() do
     System.get_env()
     |> Enum.filter(fn {k, _v} -> String.starts_with?(k, "LB_") end)
-    |> Enum.map(fn {k, _v} -> %{"label" => k, "value" => k} end)
+    |> Enum.map(fn {k, _v} -> %{"label" => String.trim_leading(k, "LB_"), "value" => k} end)
   end
 end
