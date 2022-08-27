@@ -288,7 +288,7 @@ defmodule KinoDB.ConnectionCell do
 
   defp quoted_pass(%{"password_secret" => secret}) do
     quote do
-      System.fetch_env!(unquote(secret))
+      System.fetch_env!(unquote("LB_#{secret}"))
     end
   end
 
@@ -374,8 +374,9 @@ defmodule KinoDB.ConnectionCell do
   end
 
   defp secrets() do
-    System.get_env()
-    |> Enum.filter(fn {k, _v} -> String.starts_with?(k, "LB_") end)
-    |> Enum.map(fn {k, _v} -> %{"label" => String.replace_prefix(k, "LB_", ""), "value" => k} end)
+    for {k, _v} <- System.get_env(),
+        String.starts_with?(k, "LB_"),
+        k = String.replace_prefix(k, "LB_", ""),
+        do: %{"label" => k, "value" => k}
   end
 end
