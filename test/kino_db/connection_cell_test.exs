@@ -203,12 +203,12 @@ defmodule KinoDB.ConnectionCellTest do
     push_event(kino, "update_field", %{"field" => "use_password_secret", "value" => true})
     assert_broadcast_event(kino, "update", %{"fields" => %{"use_password_secret" => true}})
 
-    push_event(kino, "update_field", %{"field" => "password_secret", "value" => "LB_PASS"})
-    assert_broadcast_event(kino, "update", %{"fields" => %{"password_secret" => "LB_PASS"}})
+    push_event(kino, "update_field", %{"field" => "password_secret", "value" => "PASS"})
+    assert_broadcast_event(kino, "update", %{"fields" => %{"password_secret" => "PASS"}})
 
     assert_smart_cell_update(
       kino,
-      %{"password_secret" => "LB_PASS"},
+      %{"password_secret" => "PASS"},
       """
       opts = [
         hostname: "localhost",
