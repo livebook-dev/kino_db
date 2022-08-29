@@ -211,7 +211,7 @@ input::-webkit-inner-spin-button {
   padding: 5px;
   background: transparent;
   position: relative;
-  top: 14px
+  top: 14px;
 }
 
 .button--sm:hover {
@@ -237,7 +237,7 @@ input::-webkit-inner-spin-button {
 }
 
 .input-icon.unavailable {
-  border-color: var(--red-300)
+  border-color: var(--red-300);
 }
 
 .input-icon-container {
@@ -259,8 +259,8 @@ input::-webkit-inner-spin-button {
 }
 
 /* Fix icon position - Safari 11+ */
-@media not all and (min-resolution:.001dpcm) {
-  @supports (-webkit-appearance:none) and (stroke-color:transparent) {
+@media not all and (min-resolution: 0.001dpcm) {
+  @supports (-webkit-appearance: none) and (stroke-color: transparent) {
     .icon-container {
       top: 22px;
     }
@@ -270,6 +270,6 @@ input::-webkit-inner-spin-button {
 /* Fix icon border - Firefox */
 @-moz-document url-prefix() {
   .icon-container {
-     height: 24px;
+    height: 24px;
   }
 }
