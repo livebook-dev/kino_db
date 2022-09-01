@@ -300,7 +300,7 @@ defmodule KinoDB.SQLCellTest do
              """
 
       assert SQLCell.to_source(put_in(attrs["connection"]["type"], "sqlite")) == """
-             result = Exqlite.query!(conn, "SELECT id FROM users", [])\
+             result = Exqlite.query!(conn, "SELECT id FROM users", [], timeout: 30000)\
              """
 
       assert SQLCell.to_source(put_in(attrs["connection"]["type"], "bigquery")) == """
