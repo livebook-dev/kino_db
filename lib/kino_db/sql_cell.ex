@@ -220,7 +220,7 @@ defmodule KinoDB.SQLCell do
     end
   end
 
-  @connection_types_with_timeout ~w|postgres mysql|
+  @connection_types_with_timeout ~w|postgres mysql sqlite|
 
   defp query_opts_args(%{"connection" => %{"type" => type}, "timeout" => timeout})
        when timeout != nil and type in @connection_types_with_timeout,
