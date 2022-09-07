@@ -49,6 +49,11 @@ defmodule KinoDB.ConnectionCell do
   end
 
   @impl true
+  def scan_secrets(pid) do
+    send(pid, :update_secrets)
+  end
+
+  @impl true
   def handle_connect(ctx) do
     payload = %{
       fields: ctx.assigns.fields,
@@ -59,6 +64,14 @@ defmodule KinoDB.ConnectionCell do
     }
 
     {:ok, payload, ctx}
+  end
+
+  @impl true
+  def handle_info(:update_secrets, ctx) do
+    secrets = secrets()
+    ctx = %{ctx | assigns: %{ctx.assigns | secrets: secrets}}
+    broadcast_event(ctx, "set_secrets", %{"secrets" => secrets})
+    {:noreply, ctx}
   end
 
   @impl true
