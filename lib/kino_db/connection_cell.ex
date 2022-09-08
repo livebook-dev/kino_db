@@ -74,6 +74,14 @@ defmodule KinoDB.ConnectionCell do
     {:noreply, ctx}
   end
 
+  def handle_info({:update_secret, secret_label}, ctx) do
+    updated_fields = to_updates(ctx.assigns.fields, "password_secret", secret_label)
+    ctx = update(ctx, :fields, &Map.merge(&1, updated_fields))
+    broadcast_event(ctx, "update", %{"fields" => updated_fields})
+
+    {:noreply, ctx}
+  end
+
   @impl true
   def handle_event("update_field", %{"field" => field, "value" => value}, ctx) do
     updated_fields = to_updates(ctx.assigns.fields, field, value)
