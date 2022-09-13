@@ -230,7 +230,6 @@ input::-webkit-inner-spin-button {
 }
 
 .input-icon {
-  width: 100%;
   border: 1px solid var(--gray-200);
   outline: none;
   padding: 8px 12px 8px 42px;
@@ -256,6 +255,11 @@ input::-webkit-inner-spin-button {
   border-top-right-radius: 0;
   border-bottom-right-radius: 0;
   margin-left: 1px;
+}
+
+.icon-container:hover {
+  cursor: pointer;
+  background-color: var(--gray-300);
 }
 
 /* Fix icon position - Safari 11+ */
