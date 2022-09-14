@@ -243,6 +243,10 @@ input::-webkit-inner-spin-button {
   position: relative;
 }
 
+.input-icon-container .input:hover {
+  cursor: pointer;
+}
+
 .icon-container {
   position: absolute;
   top: 20px;
