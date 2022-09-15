@@ -14,6 +14,8 @@ defmodule KinoDB.ConnectionCell do
     type = attrs["type"] || default_db_type()
     default_port = @default_port_by_type[type]
 
+    password = attrs["password"] || ""
+
     fields = %{
       "variable" => Kino.SmartCell.prefixed_var_name("conn", attrs["variable"]),
       "type" => type,
@@ -21,8 +23,8 @@ defmodule KinoDB.ConnectionCell do
       "database_path" => attrs["database_path"] || "",
       "port" => attrs["port"] || default_port,
       "username" => attrs["username"] || "",
-      "password" => attrs["password"] || "",
-      "use_password_secret" => Map.has_key?(attrs, "password_secret") || attrs["password"] == "",
+      "password" => password,
+      "use_password_secret" => Map.has_key?(attrs, "password_secret") || password == "",
       "password_secret" => attrs["password_secret"] || "",
       "database" => attrs["database"] || "",
       "project_id" => attrs["project_id"] || "",
