@@ -14,6 +14,8 @@ defmodule KinoDB.ConnectionCell do
     type = attrs["type"] || default_db_type()
     default_port = @default_port_by_type[type]
 
+    password = attrs["password"] || ""
+
     fields = %{
       "variable" => Kino.SmartCell.prefixed_var_name("conn", attrs["variable"]),
       "type" => type,
@@ -21,8 +23,8 @@ defmodule KinoDB.ConnectionCell do
       "database_path" => attrs["database_path"] || "",
       "port" => attrs["port"] || default_port,
       "username" => attrs["username"] || "",
-      "password" => attrs["password"] || "",
-      "use_password_secret" => Map.has_key?(attrs, "password_secret"),
+      "password" => password,
+      "use_password_secret" => Map.has_key?(attrs, "password_secret") || password == "",
       "password_secret" => attrs["password_secret"] || "",
       "database" => attrs["database"] || "",
       "project_id" => attrs["project_id"] || "",
@@ -41,8 +43,7 @@ defmodule KinoDB.ConnectionCell do
         fields: fields,
         missing_dep: missing_dep(fields),
         help_box: help_box(fields),
-        has_aws_credentials: Code.ensure_loaded?(:aws_credentials),
-        secrets: secrets()
+        has_aws_credentials: Code.ensure_loaded?(:aws_credentials)
       )
 
     {:ok, ctx}
@@ -54,8 +55,7 @@ defmodule KinoDB.ConnectionCell do
       fields: ctx.assigns.fields,
       missing_dep: ctx.assigns.missing_dep,
       help_box: ctx.assigns.help_box,
-      has_aws_credentials: ctx.assigns.has_aws_credentials,
-      secrets: ctx.assigns.secrets
+      has_aws_credentials: ctx.assigns.has_aws_credentials
     }
 
     {:ok, payload, ctx}
@@ -371,12 +371,5 @@ defmodule KinoDB.ConnectionCell do
          {:ok, _} <- Mint.HTTP.set_mode(conn, :passive),
          do: true,
          else: (_ -> false)
-  end
-
-  defp secrets() do
-    for {k, _v} <- System.get_env(),
-        String.starts_with?(k, "LB_"),
-        k = String.replace_prefix(k, "LB_", ""),
-        do: %{"label" => k, "value" => k}
   end
 end
