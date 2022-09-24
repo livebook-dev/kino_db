@@ -15,6 +15,7 @@ defmodule KinoDB.ConnectionCell do
     default_port = @default_port_by_type[type]
 
     password = attrs["password"] || ""
+    secret_access_key = attrs["secret_access_key"] || ""
 
     fields = %{
       "variable" => Kino.SmartCell.prefixed_var_name("conn", attrs["variable"]),
@@ -31,7 +32,10 @@ defmodule KinoDB.ConnectionCell do
       "default_dataset_id" => attrs["default_dataset_id"] || "",
       "credentials" => attrs["credentials"] || %{},
       "access_key_id" => attrs["access_key_id"] || "",
-      "secret_access_key" => attrs["secret_access_key"] || "",
+      "secret_access_key" => secret_access_key,
+      "use_secret_access_key_secret" =>
+        Map.has_key?(attrs, "secret_access_key_secret") || secret_access_key == "",
+      "secret_access_key_secret" => attrs["secret_access_key_secret"] || "",
       "token" => attrs["token"] || "",
       "region" => attrs["region"] || "us-east-1",
       "workgroup" => attrs["workgroup"] || "",
@@ -118,8 +122,11 @@ defmodule KinoDB.ConnectionCell do
           ~w|project_id default_dataset_id credentials|
 
         "athena" ->
-          ~w|access_key_id secret_access_key token region
-             workgroup output_location database|
+          if fields["use_secret_access_key_secret"],
+            do:
+              ~w|access_key_id secret_access_key_secret token region workgroup output_location database|,
+            else:
+              ~w|access_key_id secret_access_key token region workgroup output_location database|
 
         type when type in ["postgres", "mysql"] ->
           if fields["use_password_secret"],
@@ -143,7 +150,11 @@ defmodule KinoDB.ConnectionCell do
         "athena" ->
           if Code.ensure_loaded?(:aws_credentials),
             do: ~w|database|,
-            else: ~w|access_key_id secret_access_key region database|
+            else:
+              if(Map.has_key?(attrs, "secret_access_key"),
+                do: ~w|access_key_id secret_access_key region database|,
+                else: ~w|access_key_id secret_access_key_secret region database|
+              )
 
         type when type in ["postgres", "mysql"] ->
           ~w|hostname port|
@@ -227,12 +238,22 @@ defmodule KinoDB.ConnectionCell do
           database: unquote(attrs["database"]),
           output_location: unquote(attrs["output_location"]),
           region: unquote(attrs["region"]),
-          secret_access_key: unquote(attrs["secret_access_key"]),
+          secret_access_key: unquote(quoted_access_key(attrs)),
           token: unquote(attrs["token"]),
           workgroup: unquote(attrs["workgroup"])
         )
 
       :ok
+    end
+  end
+
+  defp quoted_access_key(%{"secret_access_key" => password}), do: password
+
+  defp quoted_access_key(%{"secret_access_key_secret" => ""}), do: ""
+
+  defp quoted_access_key(%{"secret_access_key_secret" => secret}) do
+    quote do
+      System.fetch_env!(unquote("LB_#{secret}"))
     end
   end
 
