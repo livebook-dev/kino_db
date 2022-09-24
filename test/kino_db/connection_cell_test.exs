@@ -23,6 +23,8 @@ defmodule KinoDB.ConnectionCellTest do
     "default_dataset_id" => "",
     "access_key_id" => "id",
     "secret_access_key" => "secret",
+    "use_secret_access_key_secret" => false,
+    "secret_access_key_secret" => "",
     "token" => "token",
     "region" => "region",
     "output_location" => "s3://my-bucket",
@@ -76,6 +78,21 @@ defmodule KinoDB.ConnectionCellTest do
              {:ok, db} = Kino.start_child({Postgrex, opts})\
              '''
 
+      attrs = Map.delete(@attrs, "password") |> Map.merge(%{"password_secret" => "PASS"})
+
+      assert ConnectionCell.to_source(attrs) === ~s'''
+             opts = [
+               hostname: "localhost",
+               port: 4444,
+               username: "admin",
+               password: System.fetch_env!("LB_PASS"),
+               database: "default",
+               socket_options: [:inet6]
+             ]
+
+             {:ok, db} = Kino.start_child({Postgrex, opts})\
+             '''
+
       assert ConnectionCell.to_source(put_in(@attrs["type"], "mysql")) == ~s'''
              opts = [
                hostname: "localhost",
@@ -114,6 +131,26 @@ defmodule KinoDB.ConnectionCellTest do
                  output_location: "s3://my-bucket",
                  region: "region",
                  secret_access_key: "secret",
+                 token: "token",
+                 workgroup: "primary"
+               )
+
+             :ok\
+             '''
+
+      attrs =
+        Map.delete(@attrs, "secret_access_key")
+        |> Map.merge(%{"type" => "athena", "secret_access_key_secret" => "ATHENA_KEY"})
+
+      assert ConnectionCell.to_source(attrs) == ~s'''
+             db =
+               Req.new(http_errors: :raise)
+               |> ReqAthena.attach(
+                 access_key_id: "id",
+                 database: "default",
+                 output_location: "s3://my-bucket",
+                 region: "region",
+                 secret_access_key: System.fetch_env!("LB_ATHENA_KEY"),
                  token: "token",
                  workgroup: "primary"
                )
@@ -220,6 +257,56 @@ defmodule KinoDB.ConnectionCellTest do
       ]
 
       {:ok, conn} = Kino.start_child({Postgrex, opts})\
+      """
+    )
+  end
+
+  test "athena secret key from secrets" do
+    {kino, _source} =
+      start_smart_cell!(ConnectionCell, %{
+        "variable" => "conn",
+        "type" => "athena",
+        "database" => "default",
+        "access_key_id" => "id",
+        "secret_access_key" => "secret_key",
+        "token" => "token",
+        "region" => "region",
+        "output_location" => "s3://my-bucket",
+        "workgroup" => "primary"
+      })
+
+    push_event(kino, "update_field", %{"field" => "use_secret_access_key_secret", "value" => true})
+
+    assert_broadcast_event(kino, "update", %{
+      "fields" => %{"use_secret_access_key_secret" => true}
+    })
+
+    push_event(kino, "update_field", %{
+      "field" => "secret_access_key_secret",
+      "value" => "ATHENA_KEY"
+    })
+
+    assert_broadcast_event(kino, "update", %{
+      "fields" => %{"secret_access_key_secret" => "ATHENA_KEY"}
+    })
+
+    assert_smart_cell_update(
+      kino,
+      %{"secret_access_key_secret" => "ATHENA_KEY"},
+      """
+      conn =
+        Req.new(http_errors: :raise)
+        |> ReqAthena.attach(
+          access_key_id: "id",
+          database: "default",
+          output_location: "s3://my-bucket",
+          region: "region",
+          secret_access_key: System.fetch_env!("LB_ATHENA_KEY"),
+          token: "token",
+          workgroup: "primary"
+        )
+
+      :ok\
       """
     )
   end
