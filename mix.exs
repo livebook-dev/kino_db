@@ -26,7 +26,7 @@ defmodule KinoDB.MixProject do
 
   defp deps do
     [
-      {:kino, "~> 0.6.1"},
+      {:kino, "~> 0.6.1 or ~> 0.7.0"},
       {:table, "~> 0.1.2"},
       {:postgrex, "~> 0.16.3 or ~> 0.17", optional: true},
       {:exqlite, "~> 0.11", optional: true},
