@@ -23,6 +23,7 @@ defmodule KinoDB.ConnectionCell do
       "hostname" => attrs["hostname"] || "localhost",
       "database_path" => attrs["database_path"] || "",
       "port" => attrs["port"] || default_port,
+      "use_ipv6" => false,
       "username" => attrs["username"] || "",
       "password" => password,
       "use_password_secret" => Map.has_key?(attrs, "password_secret") || password == "",
@@ -130,8 +131,8 @@ defmodule KinoDB.ConnectionCell do
 
         type when type in ["postgres", "mysql"] ->
           if fields["use_password_secret"],
-            do: ~w|database hostname port username password_secret|,
-            else: ~w|database hostname port username password|
+            do: ~w|database hostname port use_ipv6 username password_secret|,
+            else: ~w|database hostname port use_ipv6 username password|
       end
 
     Map.take(fields, @default_keys ++ connection_keys)
@@ -289,15 +290,18 @@ defmodule KinoDB.ConnectionCell do
   end
 
   defp shared_options(attrs) do
-    quote do
-      [
-        hostname: unquote(attrs["hostname"]),
-        port: unquote(attrs["port"]),
-        username: unquote(attrs["username"]),
-        password: unquote(quoted_pass(attrs)),
-        database: unquote(attrs["database"]),
-        socket_options: [:inet6]
-      ]
+    opts = [
+      hostname: attrs["hostname"],
+      port: attrs["port"],
+      username: attrs["username"],
+      password: quoted_pass(attrs),
+      database: attrs["database"]
+    ]
+
+    if attrs["use_ipv6"] do
+      opts ++ [socket_options: [:inet6]]
+    else
+      opts ++ []
     end
   end
 

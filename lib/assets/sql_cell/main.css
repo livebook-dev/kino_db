@@ -13,6 +13,7 @@
   --gray-800: #1c2a3a;
 
   --blue-100: #ecf0ff;
+  --blue-600: #3e64ff;
 }
 
 input,
@@ -210,64 +211,53 @@ select.input {
 /* Switch */
 
 .switch-button {
-  margin-top: 3px;
   display: inline-block;
-  height: 1.75rem;
-  margin-right: 0.5rem;
   position: relative;
-  transition-duration: 0.15s;
-  transition-property: color, background-color, border-color, fill, stroke,
-    opacity, box-shadow, transform, filter, -webkit-text-decoration-color,
-    -webkit-backdrop-filter;
-  transition-property: color, background-color, border-color,
-    text-decoration-color, fill, stroke, opacity, box-shadow, transform, filter,
-    backdrop-filter;
-  transition-property: color, background-color, border-color,
-    text-decoration-color, fill, stroke, opacity, box-shadow, transform, filter,
-    backdrop-filter, -webkit-text-decoration-color, -webkit-backdrop-filter;
-  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
-  -webkit-user-select: none;
-  -moz-user-select: none;
-  -ms-user-select: none;
+  width: 56px;
+  height: 28px;
   user-select: none;
-  width: 3.5rem;
 }
 
-.switch-checkbox {
-  -webkit-appearance: none;
-  -moz-appearance: none;
+.switch-button[disabled] {
+  pointer-events: none;
+  opacity: 0.5;
+}
+
+.switch-button-checkbox {
+  outline: none;
   appearance: none;
-  background-color: rgb(145 164 183);
-  border-color: rgb(240 245 249);
-  border-width: 5px;
-  height: 1.25rem;
   position: absolute;
-  width: 1.45rem;
-  top: 1px;
-}
-
-.switch-button-bg,
-.switch-checkbox {
-  border-radius: 9999px;
-  cursor: pointer;
   display: block;
-  transition-duration: 0.3s;
+  width: 28px;
+  height: 28px;
+  margin: 0;
+  border-radius: 9999px;
+  background-color: var(--gray-400);
+  border: 5px solid var(--gray-100);
+  cursor: pointer;
   transition-property: all;
   transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 300ms;
 }
 
 .switch-button-bg {
-  background-color: var(--gray-200);
+  display: block;
   height: 100%;
   width: 100%;
+  border-radius: 9999px;
+  background-color: var(--gray-100);
+  cursor: pointer;
+  transition-property: all;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 300ms;
 }
 
-.switch-checkbox:checked {
-  background-color: rgb(255 255 255);
-  border-color: rgb(62 100 255);
+.switch-button-checkbox:checked {
+  background: white;
+  border-color: var(--blue-600);
   transform: translateX(100%);
 }
 
-.switch-checkbox:checked + .switch-button-bg {
-  background-color: rgb(62 100 255);
+.switch-button-checkbox:checked + .switch-button-bg {
+  background-color: var(--blue-600);
 }

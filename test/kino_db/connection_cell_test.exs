@@ -12,6 +12,7 @@ defmodule KinoDB.ConnectionCellTest do
     "type" => "postgres",
     "hostname" => "localhost",
     "port" => 4444,
+    "use_ipv6" => false,
     "username" => "admin",
     "password" => "pass",
     "use_password_secret" => false,
@@ -49,15 +50,7 @@ defmodule KinoDB.ConnectionCellTest do
 
       assert source ==
                """
-               opts = [
-                 hostname: "localhost",
-                 port: 5432,
-                 username: "",
-                 password: "",
-                 database: "",
-                 socket_options: [:inet6]
-               ]
-
+               opts = [hostname: "localhost", port: 5432, username: "", password: "", database: ""]
                {:ok, conn} = Kino.start_child({Postgrex, opts})\
                """
     end
@@ -66,6 +59,20 @@ defmodule KinoDB.ConnectionCellTest do
   describe "code generation" do
     test "restores source code from attrs" do
       assert ConnectionCell.to_source(@attrs) === ~s'''
+             opts = [
+               hostname: "localhost",
+               port: 4444,
+               username: "admin",
+               password: "pass",
+               database: "default"
+             ]
+
+             {:ok, db} = Kino.start_child({Postgrex, opts})\
+             '''
+
+      attrs = Map.put(@attrs, "use_ipv6", true)
+
+      assert ConnectionCell.to_source(attrs) === ~s'''
              opts = [
                hostname: "localhost",
                port: 4444,
@@ -86,8 +93,7 @@ defmodule KinoDB.ConnectionCellTest do
                port: 4444,
                username: "admin",
                password: System.fetch_env!("LB_PASS"),
-               database: "default",
-               socket_options: [:inet6]
+               database: "default"
              ]
 
              {:ok, db} = Kino.start_child({Postgrex, opts})\
@@ -99,8 +105,7 @@ defmodule KinoDB.ConnectionCellTest do
                port: 4444,
                username: "admin",
                password: "pass",
-               database: "default",
-               socket_options: [:inet6]
+               database: "default"
              ]
 
              {:ok, db} = Kino.start_child({MyXQL, opts})\
@@ -182,15 +187,7 @@ defmodule KinoDB.ConnectionCellTest do
     assert_broadcast_event(kino, "update", %{"fields" => %{"hostname" => "myhost"}})
 
     assert_smart_cell_update(kino, %{"hostname" => "myhost"}, """
-    opts = [
-      hostname: "myhost",
-      port: 5432,
-      username: "",
-      password: "",
-      database: "",
-      socket_options: [:inet6]
-    ]
-
+    opts = [hostname: "myhost", port: 5432, username: "", password: "", database: ""]
     {:ok, conn} = Kino.start_child({Postgrex, opts})\
     """)
   end
@@ -216,15 +213,7 @@ defmodule KinoDB.ConnectionCellTest do
     assert_broadcast_event(kino, "update", %{"fields" => %{"type" => "mysql", "port" => 3306}})
 
     assert_smart_cell_update(kino, %{"type" => "mysql", "port" => 3306}, """
-    opts = [
-      hostname: "localhost",
-      port: 3306,
-      username: "",
-      password: "",
-      database: "",
-      socket_options: [:inet6]
-    ]
-
+    opts = [hostname: "localhost", port: 3306, username: "", password: "", database: ""]
     {:ok, conn} = Kino.start_child({MyXQL, opts})\
     """)
   end
@@ -252,8 +241,7 @@ defmodule KinoDB.ConnectionCellTest do
         port: 5432,
         username: "",
         password: System.fetch_env!("LB_PASS"),
-        database: "",
-        socket_options: [:inet6]
+        database: ""
       ]
 
       {:ok, conn} = Kino.start_child({Postgrex, opts})\
