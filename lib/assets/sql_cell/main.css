@@ -25,6 +25,7 @@ button {
 
 .header {
   display: flex;
+  flex-wrap: wrap;
   align-items: stretch;
   justify-content: flex-start;
   background-color: var(--blue-100);
@@ -79,6 +80,12 @@ button {
   padding-right: 6px;
   font-size: 0.875rem;
   text-transform: uppercase;
+}
+
+.input-container {
+  flex-grow: 1;
+  display: flex;
+  align-items: center;
 }
 
 .field {
