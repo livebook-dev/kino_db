@@ -13,6 +13,7 @@
   --gray-800: #1c2a3a;
 
   --blue-100: #ecf0ff;
+  --blue-600: #3e64ff;
 
   --red-300: #f1a3a6;
 }
@@ -33,7 +34,7 @@ button {
 
 .row {
   display: flex;
-  align-items: center;
+  flex-wrap: wrap;
   padding: 8px 16px;
   gap: 8px;
 }
@@ -123,6 +124,12 @@ input[required].empty {
   text-transform: uppercase;
 }
 
+.input-container {
+  flex-grow: 1;
+  display: flex;
+  align-items: center;
+}
+
 .field {
   display: flex;
   flex-direction: column;
@@ -185,15 +192,6 @@ select.input {
   background-position: center right 10px;
   background-size: 10px;
   padding-right: 28px;
-}
-
-@media only screen and (max-width: 750px) {
-  .mixed-row .field {
-    max-width: 32%;
-  }
-  .input--number {
-    max-width: 100%;
-  }
 }
 
 input::-webkit-outer-spin-button,
@@ -274,6 +272,60 @@ input::-webkit-inner-spin-button {
 
 .hidden-checkbox:hover {
   cursor: pointer;
+}
+
+/* Switch */
+
+.switch-button {
+  display: inline-block;
+  position: relative;
+  width: 56px;
+  height: 28px;
+  user-select: none;
+}
+
+.switch-button[disabled] {
+  pointer-events: none;
+  opacity: 0.5;
+}
+
+.switch-button-checkbox {
+  outline: none;
+  appearance: none;
+  position: absolute;
+  display: block;
+  width: 28px;
+  height: 28px;
+  margin: 0;
+  border-radius: 9999px;
+  background-color: var(--gray-400);
+  border: 5px solid var(--gray-100);
+  cursor: pointer;
+  transition-property: all;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 300ms;
+}
+
+.switch-button-bg {
+  display: block;
+  height: 100%;
+  width: 100%;
+  border-radius: 9999px;
+  background-color: var(--gray-100);
+  cursor: pointer;
+  transition-property: all;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 300ms;
+}
+
+.switch-button-checkbox:checked {
+  background: white;
+  border-color: var(--blue-600);
+  transform: translateX(100%);
+}
+
+.switch-button-checkbox:checked + .switch-button-bg {
+  background-color: var(--blue-600);
 }
 
 /* Fix icon position - Safari 11+ */
