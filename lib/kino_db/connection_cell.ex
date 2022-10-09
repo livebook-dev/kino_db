@@ -7,7 +7,7 @@ defmodule KinoDB.ConnectionCell do
   use Kino.JS.Live
   use Kino.SmartCell, name: "Database connection"
 
-  @default_port_by_type %{"postgres" => 5432, "mysql" => 3306}
+  @default_port_by_type %{"postgres" => 5432, "mysql" => 3306, "mongo" => 27017}
 
   @impl true
   def init(attrs, ctx) do
@@ -129,7 +129,7 @@ defmodule KinoDB.ConnectionCell do
             else:
               ~w|access_key_id secret_access_key token region workgroup output_location database|
 
-        type when type in ["postgres", "mysql"] ->
+        type when type in ["postgres", "mysql", "mongo"] ->
           if fields["use_password_secret"],
             do: ~w|database hostname port use_ipv6 username password_secret|,
             else: ~w|database hostname port use_ipv6 username password|
@@ -157,7 +157,7 @@ defmodule KinoDB.ConnectionCell do
                 else: ~w|access_key_id secret_access_key_secret region database|
               )
 
-        type when type in ["postgres", "mysql"] ->
+        type when type in ["postgres", "mysql", "mongo"] ->
           ~w|hostname port|
       end
 
@@ -206,6 +206,14 @@ defmodule KinoDB.ConnectionCell do
       opts = unquote(shared_options(attrs))
 
       {:ok, unquote(quoted_var(attrs["variable"]))} = Kino.start_child({MyXQL, opts})
+    end
+  end
+
+  defp to_quoted(%{"type" => "mongo"} = attrs) do
+    quote do
+      opts = unquote(shared_options(attrs))
+
+      {:ok, unquote(quoted_var(attrs["variable"]))} = Kino.start_child({Mongo, opts})
     end
   end
 
@@ -321,6 +329,7 @@ defmodule KinoDB.ConnectionCell do
     cond do
       Code.ensure_loaded?(Postgrex) -> "postgres"
       Code.ensure_loaded?(MyXQL) -> "mysql"
+      Code.ensure_loaded?(Mongo) -> "mongo"
       Code.ensure_loaded?(Exqlite) -> "sqlite"
       Code.ensure_loaded?(ReqBigQuery) -> "bigquery"
       Code.ensure_loaded?(ReqAthena) -> "athena"
@@ -337,6 +346,12 @@ defmodule KinoDB.ConnectionCell do
   defp missing_dep(%{"type" => "mysql"}) do
     unless Code.ensure_loaded?(MyXQL) do
       ~s/{:myxql, "~> 0.6.2"}/
+    end
+  end
+
+  defp missing_dep(%{"type" => "mongo"}) do
+    unless Code.ensure_loaded?(Mongo) do
+      ~s/{:mongodb_driver, "~> 0.9.2"}/
     end
   end
 

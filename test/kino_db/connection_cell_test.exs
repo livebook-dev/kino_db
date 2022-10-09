@@ -110,6 +110,17 @@ defmodule KinoDB.ConnectionCellTest do
 
              {:ok, db} = Kino.start_child({MyXQL, opts})\
              '''
+      assert ConnectionCell.to_source(put_in(@attrs["type"], "mongo")) == ~s'''
+             opts = [
+               hostname: "localhost",
+               port: 27017,
+               username: "",
+               password: "",
+               database: "default"
+             ]
+
+             {:ok, db} = Kino.start_child({Mongo, opts})\
+             '''
 
       assert ConnectionCell.to_source(put_in(@attrs["type"], "sqlite")) == ~s'''
              opts = [database: "/path/to/sqlite3.db"]
