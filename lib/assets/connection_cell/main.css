@@ -298,8 +298,8 @@ input::-webkit-inner-spin-button {
   height: 28px;
   margin: 0;
   border-radius: 9999px;
-  background-color: var(--gray-400);
-  border: 5px solid var(--gray-100);
+  background-color: white;
+  border: 5px solid var(--gray-200);
   cursor: pointer;
   transition-property: all;
   transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
@@ -311,7 +311,7 @@ input::-webkit-inner-spin-button {
   height: 100%;
   width: 100%;
   border-radius: 9999px;
-  background-color: var(--gray-100);
+  background-color: var(--gray-200);
   cursor: pointer;
   transition-property: all;
   transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
