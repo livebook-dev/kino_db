@@ -351,7 +351,7 @@ defmodule KinoDB.ConnectionCell do
 
   defp missing_dep(%{"type" => "mongo"}) do
     unless Code.ensure_loaded?(Mongo) do
-      ~s/{:mongodb_driver, "~> 0.9.2"}/
+      ~s/{:mongodb, "~> 0.5.1"}/
     end
   end
 
