@@ -36,6 +36,7 @@ defmodule KinoDB.ConnectionCell do
       "secret_access_key" => secret_access_key,
       "use_secret_access_key_secret" =>
         Map.has_key?(attrs, "secret_access_key_secret") || secret_access_key == "",
+      "url" => attrs["url"] || "",
       "secret_access_key_secret" => attrs["secret_access_key_secret"] || "",
       "token" => attrs["token"] || "",
       "region" => attrs["region"] || "us-east-1",
@@ -116,6 +117,9 @@ defmodule KinoDB.ConnectionCell do
   def to_attrs(%{assigns: %{fields: fields}}) do
     connection_keys =
       case fields["type"] do
+        "mongo" ->
+          ~w|url|
+
         "sqlite" ->
           ~w|database_path|
 
@@ -129,7 +133,7 @@ defmodule KinoDB.ConnectionCell do
             else:
               ~w|access_key_id secret_access_key token region workgroup output_location database|
 
-        type when type in ["postgres", "mysql", "mongo"] ->
+        type when type in ["postgres", "mysql"] ->
           if fields["use_password_secret"],
             do: ~w|database hostname port use_ipv6 username password_secret|,
             else: ~w|database hostname port use_ipv6 username password|
@@ -142,6 +146,9 @@ defmodule KinoDB.ConnectionCell do
   def to_source(attrs) do
     required_keys =
       case attrs["type"] do
+        "mongo" ->
+          ~w|url|
+
         "sqlite" ->
           ~w|database_path|
 
@@ -157,7 +164,7 @@ defmodule KinoDB.ConnectionCell do
                 else: ~w|access_key_id secret_access_key_secret region database|
               )
 
-        type when type in ["postgres", "mysql", "mongo"] ->
+        type when type in ["postgres", "mysql"] ->
           ~w|hostname port|
       end
 
@@ -211,7 +218,7 @@ defmodule KinoDB.ConnectionCell do
 
   defp to_quoted(%{"type" => "mongo"} = attrs) do
     quote do
-      opts = unquote(shared_options(attrs))
+      opts = [database: unquote(attrs["url"])]
 
       {:ok, unquote(quoted_var(attrs["variable"]))} = Kino.start_child({Mongo, opts})
     end
