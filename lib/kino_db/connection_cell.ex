@@ -218,9 +218,7 @@ defmodule KinoDB.ConnectionCell do
 
   defp to_quoted(%{"type" => "mongo"} = attrs) do
     quote do
-      opts = [url: unquote(attrs["url"])]
-
-      {:ok, unquote(quoted_var(attrs["variable"]))} = Kino.start_child({Mongo, opts})
+      {:ok, unquote(quoted_var(attrs["variable"]))} = Mongo.start_link(url: unquote(attrs["url"]))
     end
   end
 
