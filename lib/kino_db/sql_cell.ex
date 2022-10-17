@@ -119,6 +119,7 @@ defmodule KinoDB.SQLCell do
         "Elixir.Postgrex" <> _ -> "postgres"
         "Elixir.MyXQL" <> _ -> "mysql"
         "Elixir.Exqlite" <> _ -> "sqlite"
+        "Elixir.Mongo" <> _ -> "mongo"
         _ -> nil
       end
     else
@@ -172,6 +173,10 @@ defmodule KinoDB.SQLCell do
 
   defp to_quoted(%{"connection" => %{"type" => "athena"}} = attrs) do
     to_req_quoted(attrs, fn _n -> "?" end, :athena)
+  end
+
+  defp to_quoted(%{"connection" => %{"type" => "mongo"}} = attrs) do
+    to_quoted(attrs, quote(do: Mongo), fn _n -> "?#{n}" end)
   end
 
   defp to_quoted(_ctx) do
