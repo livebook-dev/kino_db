@@ -176,7 +176,7 @@ defmodule KinoDB.SQLCell do
   end
 
   defp to_quoted(%{"connection" => %{"type" => "mongo"}} = attrs) do
-    to_quoted(attrs, quote(do: Mongo), fn _n -> "?#{n}" end)
+    to_quoted(attrs, quote(do: Mongo), fn n -> "?#{n}" end)
   end
 
   defp to_quoted(_ctx) do
