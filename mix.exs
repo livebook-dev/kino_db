@@ -14,8 +14,7 @@ defmodule KinoDB.MixProject do
       start_permanent: Mix.env() == :prod,
       deps: deps(),
       docs: docs(),
-      package: package(),
-      xref: xref()
+      package: package()
     ]
   end
 
@@ -54,12 +53,6 @@ defmodule KinoDB.MixProject do
       links: %{
         "GitHub" => "https://github.com/livebook-dev/kino_db"
       }
-    ]
-  end
-
-  def xref do
-    [
-      exclude: [Mint.HTTP]
     ]
   end
 end
