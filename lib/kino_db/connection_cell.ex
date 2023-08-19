@@ -23,7 +23,7 @@ defmodule KinoDB.ConnectionCell do
       "hostname" => attrs["hostname"] || "localhost",
       "database_path" => attrs["database_path"] || "",
       "port" => attrs["port"] || default_port,
-      "use_ipv6" => false,
+      "use_ipv6" => Map.get(attrs, "use_ipv6", false),
       "username" => attrs["username"] || "",
       "password" => password,
       "use_password_secret" => Map.has_key?(attrs, "password_secret") || password == "",
