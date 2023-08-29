@@ -152,6 +152,7 @@ defmodule KinoDB.SQLCell do
         "Elixir.Postgrex" <> _ -> "postgres"
         "Elixir.MyXQL" <> _ -> "mysql"
         "Elixir.Exqlite" <> _ -> "sqlite"
+        "Elixir.Tds" <> _ -> "sqlserver"
         _ -> nil
       end
     else
@@ -213,6 +214,10 @@ defmodule KinoDB.SQLCell do
     to_explorer_quoted(attrs, fn n -> "?#{n}" end)
   end
 
+  defp to_quoted(%{"connection" => %{"type" => "sqlserver"}} = attrs) do
+    to_quoted(attrs, quote(do: Tds), fn n -> "@#{n}" end)
+  end
+
   defp to_quoted(%{"connection" => %{"type" => "bigquery"}} = attrs) do
     to_req_quoted(attrs, fn _n -> "?" end, :bigquery)
   end
@@ -227,7 +232,7 @@ defmodule KinoDB.SQLCell do
   end
 
   defp to_quoted(attrs, quoted_module, next) do
-    {query, params} = parameterize(attrs["query"], next)
+    {query, params} = parameterize(attrs["query"], attrs["connection"]["type"], next)
     opts_args = query_opts_args(attrs)
 
     quote do
@@ -242,7 +247,7 @@ defmodule KinoDB.SQLCell do
   end
 
   defp to_req_quoted(attrs, next, req_key) do
-    {query, params} = parameterize(attrs["query"], next)
+    {query, params} = parameterize(attrs["query"], attrs["connection"]["type"], next)
     query = {quoted_query(query), params}
     opts = query_opts_args(attrs)
     req_opts = opts |> Enum.at(0, []) |> Keyword.put(req_key, query)
@@ -281,7 +286,7 @@ defmodule KinoDB.SQLCell do
     end
   end
 
-  @connection_types_with_timeout ~w|postgres mysql sqlite|
+  @connection_types_with_timeout ~w|postgres mysql sqlite sqlserver|
 
   defp query_opts_args(%{"connection" => %{"type" => type}, "timeout" => timeout})
        when timeout != nil and type in @connection_types_with_timeout,
@@ -292,45 +297,54 @@ defmodule KinoDB.SQLCell do
 
   defp query_opts_args(_attrs), do: []
 
-  defp parameterize(query, next) do
-    parameterize(query, "", [], 1, next)
+  defp parameterize(query, type, next) do
+    parameterize(query, "", [], 1, type, next)
   end
 
-  defp parameterize("", raw, params, _n, _next) do
+  defp parameterize("", raw, params, _n, _type, _next) do
     {raw, Enum.reverse(params)}
   end
 
-  defp parameterize("--" <> _ = query, raw, params, n, next) do
+  defp parameterize("--" <> _ = query, raw, params, n, type, next) do
     {comment, rest} =
       case String.split(query, "\n", parts: 2) do
         [comment, rest] -> {comment <> "\n", rest}
         [comment] -> {comment, ""}
       end
 
-    parameterize(rest, raw <> comment, params, n, next)
+    parameterize(rest, raw <> comment, params, n, type, next)
   end
 
-  defp parameterize("/*" <> _ = query, raw, params, n, next) do
+  defp parameterize("/*" <> _ = query, raw, params, n, type, next) do
     {comment, rest} =
       case String.split(query, "*/", parts: 2) do
         [comment, rest] -> {comment <> "*/", rest}
         [comment] -> {comment, ""}
       end
 
-    parameterize(rest, raw <> comment, params, n, next)
+    parameterize(rest, raw <> comment, params, n, type, next)
   end
 
-  defp parameterize("{{" <> rest = query, raw, params, n, next) do
+  defp parameterize("{{" <> rest = query, raw, params, n, type, next) do
     with [inner, rest] <- String.split(rest, "}}", parts: 2),
-         {:ok, param} <- Code.string_to_quoted(inner) do
-      parameterize(rest, raw <> next.(n), [param | params], n + 1, next)
+         sql_param <- next.(n),
+         {:ok, param} <- quote_param(type, inner, sql_param) do
+      parameterize(rest, raw <> sql_param, [param | params], n + 1, type, next)
     else
-      _ -> parameterize("", raw <> query, params, n, next)
+      _ -> parameterize("", raw <> query, params, n, type, next)
     end
   end
 
-  defp parameterize(<<char::utf8, rest::binary>>, raw, params, n, next) do
-    parameterize(rest, <<raw::binary, char::utf8>>, params, n, next)
+  defp parameterize(<<char::utf8, rest::binary>>, raw, params, n, type, next) do
+    parameterize(rest, <<raw::binary, char::utf8>>, params, n, type, next)
+  end
+
+  defp quote_param("sqlserver", inner, sql_param) do
+    Code.string_to_quoted("%Tds.Parameter{name: \"#{sql_param}\", value: #{inner}}")
+  end
+
+  defp quote_param(_type, inner, _sql_param) do
+    Code.string_to_quoted(inner)
   end
 
   defp data_frame_alias(%Macro.Env{aliases: aliases}) do

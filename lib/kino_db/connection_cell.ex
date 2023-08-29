@@ -7,7 +7,7 @@ defmodule KinoDB.ConnectionCell do
   use Kino.JS.Live
   use Kino.SmartCell, name: "Database connection"
 
-  @default_port_by_type %{"postgres" => 5432, "mysql" => 3306}
+  @default_port_by_type %{"postgres" => 5432, "mysql" => 3306, "sqlserver" => 1433}
 
   @impl true
   def init(attrs, ctx) do
@@ -43,7 +43,8 @@ defmodule KinoDB.ConnectionCell do
       "workgroup" => attrs["workgroup"] || "",
       "output_location" => attrs["output_location"] || "",
       "account" => attrs["account"] || "",
-      "schema" => attrs["schema"] || ""
+      "schema" => attrs["schema"] || "",
+      "instance" => attrs["instance"] || ""
     }
 
     ctx =
@@ -137,6 +138,11 @@ defmodule KinoDB.ConnectionCell do
             do: ~w|database schema account username password_secret|,
             else: ~w|database schema account username password|
 
+        "sqlserver" ->
+          if fields["use_password_secret"],
+            do: ~w|database hostname port use_ipv6 username password_secret ssl instance|,
+            else: ~w|database hostname port use_ipv6 username password ssl instance|
+
         type when type in ["postgres", "mysql"] ->
           if fields["use_password_secret"],
             do: ~w|database hostname port use_ipv6 use_ssl username password_secret|,
@@ -170,6 +176,9 @@ defmodule KinoDB.ConnectionCell do
             do: ~w|account username password_secret|,
             else: ~w|account username password|
           )
+
+        "sqlserver" ->
+          ~w|hostname port|
 
         type when type in ["postgres", "mysql"] ->
           ~w|hostname port|
@@ -231,6 +240,14 @@ defmodule KinoDB.ConnectionCell do
       opts = unquote(shared_options(attrs))
 
       {:ok, unquote(quoted_var(attrs["variable"]))} = Kino.start_child({MyXQL, opts})
+    end
+  end
+
+  defp to_quoted(%{"type" => "sqlserver"} = attrs) do
+    quote do
+      opts = unquote(shared_options(attrs)) ++ unquote(sqlserver_options(attrs))
+
+      {:ok, unquote(quoted_var(attrs["variable"]))} = Kino.start_child({Tds, opts})
     end
   end
 
@@ -337,6 +354,19 @@ defmodule KinoDB.ConnectionCell do
     end
   end
 
+  defp sqlserver_options(attrs) do
+    instance = attrs["instance"]
+
+    opts =
+      if instance && instance != "" do
+        [instance: instance]
+      else
+        []
+      end
+
+    opts ++ [ssl: Map.has_key?(attrs, "use_ssl")]
+  end
+
   defp quoted_var(string), do: {String.to_atom(string), [], nil}
 
   defp quoted_pass(%{"password" => password}), do: password
@@ -357,6 +387,7 @@ defmodule KinoDB.ConnectionCell do
       Code.ensure_loaded?(ReqBigQuery) -> "bigquery"
       Code.ensure_loaded?(ReqAthena) -> "athena"
       Code.ensure_loaded?(Adbc) -> "snowflake"
+      Code.ensure_loaded?(Tds) -> "sqlserver"
       true -> "postgres"
     end
   end
@@ -394,6 +425,12 @@ defmodule KinoDB.ConnectionCell do
   defp missing_dep(%{"type" => "snowflake"}) do
     unless Code.ensure_loaded?(Adbc) do
       ~s|{:adbc, "~> 0.1.0"}|
+    end
+  end
+
+  defp missing_dep(%{"type" => "sqlserver"}) do
+    unless Code.ensure_loaded?(Tds) do
+      ~s|{:tds, "~> 2.3"}|
     end
   end
 
