@@ -13,6 +13,7 @@ defmodule KinoDB.ConnectionCellTest do
     "hostname" => "localhost",
     "port" => 4444,
     "use_ipv6" => false,
+    "use_ssl" => false,
     "username" => "admin",
     "password" => "pass",
     "use_password_secret" => false,
@@ -51,6 +52,11 @@ defmodule KinoDB.ConnectionCellTest do
       assert source ==
                """
                opts = [hostname: "localhost", port: 5432, username: "", password: "", database: ""]
+
+               if opts[:ssl] == true do
+                 :ssl.start()
+               end
+
                {:ok, conn} = Kino.start_child({Postgrex, opts})\
                """
     end
@@ -67,6 +73,10 @@ defmodule KinoDB.ConnectionCellTest do
                database: "default"
              ]
 
+             if opts[:ssl] == true do
+               :ssl.start()
+             end
+
              {:ok, db} = Kino.start_child({Postgrex, opts})\
              '''
 
@@ -82,6 +92,29 @@ defmodule KinoDB.ConnectionCellTest do
                socket_options: [:inet6]
              ]
 
+             if opts[:ssl] == true do
+               :ssl.start()
+             end
+
+             {:ok, db} = Kino.start_child({Postgrex, opts})\
+             '''
+
+      attrs = Map.put(@attrs, "use_ssl", true)
+
+      assert ConnectionCell.to_source(attrs) === ~s'''
+             opts = [
+               hostname: "localhost",
+               port: 4444,
+               username: "admin",
+               password: "pass",
+               database: "default",
+               ssl: true
+             ]
+
+             if opts[:ssl] == true do
+               :ssl.start()
+             end
+
              {:ok, db} = Kino.start_child({Postgrex, opts})\
              '''
 
@@ -96,6 +129,10 @@ defmodule KinoDB.ConnectionCellTest do
                database: "default"
              ]
 
+             if opts[:ssl] == true do
+               :ssl.start()
+             end
+
              {:ok, db} = Kino.start_child({Postgrex, opts})\
              '''
 
@@ -107,6 +144,10 @@ defmodule KinoDB.ConnectionCellTest do
                password: "pass",
                database: "default"
              ]
+
+             if opts[:ssl] == true do
+               :ssl.start()
+             end
 
              {:ok, db} = Kino.start_child({MyXQL, opts})\
              '''
@@ -188,6 +229,11 @@ defmodule KinoDB.ConnectionCellTest do
 
     assert_smart_cell_update(kino, %{"hostname" => "myhost"}, """
     opts = [hostname: "myhost", port: 5432, username: "", password: "", database: ""]
+
+    if opts[:ssl] == true do
+      :ssl.start()
+    end
+
     {:ok, conn} = Kino.start_child({Postgrex, opts})\
     """)
   end
@@ -214,6 +260,11 @@ defmodule KinoDB.ConnectionCellTest do
 
     assert_smart_cell_update(kino, %{"type" => "mysql", "port" => 3306}, """
     opts = [hostname: "localhost", port: 3306, username: "", password: "", database: ""]
+
+    if opts[:ssl] == true do
+      :ssl.start()
+    end
+
     {:ok, conn} = Kino.start_child({MyXQL, opts})\
     """)
   end
@@ -243,6 +294,10 @@ defmodule KinoDB.ConnectionCellTest do
         password: System.fetch_env!("LB_PASS"),
         database: ""
       ]
+
+      if opts[:ssl] == true do
+        :ssl.start()
+      end
 
       {:ok, conn} = Kino.start_child({Postgrex, opts})\
       """
