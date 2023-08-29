@@ -122,7 +122,7 @@ defmodule KinoDB.SQLCell do
         _ -> nil
       end
     else
-      _ -> nil
+      _ -> connection_from_adbc(connection)
     end
   end
 
@@ -135,6 +135,15 @@ defmodule KinoDB.SQLCell do
   end
 
   defp connection_type(_connection), do: nil
+
+  defp connection_from_adbc(connection) when is_pid(connection) do
+    with true <- Code.ensure_loaded?(Adbc),
+         true <- is_snowflake_conn?(connection) do
+      "snowflake"
+    else
+      _ -> nil
+    end
+  end
 
   @impl true
   def to_attrs(ctx) do
@@ -164,6 +173,10 @@ defmodule KinoDB.SQLCell do
 
   defp to_quoted(%{"connection" => %{"type" => "sqlite"}} = attrs) do
     to_quoted(attrs, quote(do: Exqlite), fn n -> "?#{n}" end)
+  end
+
+  defp to_quoted(%{"connection" => %{"type" => "snowflake"}} = attrs) do
+    to_quoted(attrs, quote(do: Adbc.Connection), fn n -> "?#{n}" end)
   end
 
   defp to_quoted(%{"connection" => %{"type" => "bigquery"}} = attrs) do
@@ -271,4 +284,9 @@ defmodule KinoDB.SQLCell do
   defp parameterize(<<char::utf8, rest::binary>>, raw, params, n, next) do
     parameterize(rest, <<raw::binary, char::utf8>>, params, n, next)
   end
+
+  defp is_snowflake_conn?(conn) when conn == self(), do: false
+  defp is_snowflake_conn?(conn) when is_pid(conn), do: is_snowflake_conn?(:sys.get_state(conn))
+  defp is_snowflake_conn?(%{queue: _, lock: _, conn: conn}) when is_reference(conn), do: true
+  defp is_snowflake_conn?(_), do: false
 end
