@@ -13,7 +13,8 @@ defmodule KinoDB.SQLCellTest do
         "connection" => %{"variable" => "db", "type" => "postgres"},
         "result_variable" => "ids_result",
         "timeout" => nil,
-        "query" => "SELECT id FROM users"
+        "query" => "SELECT id FROM users",
+        "data_frame_alias" => Explorer.DataFrame
       }
 
       {_kino, source} = start_smart_cell!(SQLCell, attrs)
@@ -68,7 +69,8 @@ defmodule KinoDB.SQLCellTest do
         "connection" => %{"variable" => "conn", "type" => "postgres"},
         "result_variable" => "result",
         "timeout" => nil,
-        "query" => "SELECT id FROM users"
+        "query" => "SELECT id FROM users",
+        "data_frame_alias" => Explorer.DataFrame
       }
 
       assert SQLCell.to_source(attrs) == """
@@ -92,7 +94,7 @@ defmodule KinoDB.SQLCellTest do
              """
 
       assert SQLCell.to_source(put_in(attrs["connection"]["type"], "snowflake")) == """
-             result = Adbc.Connection.query!(conn, "SELECT id FROM users", [])\
+             result = Explorer.DataFrame.from_query!(conn, "SELECT id FROM users", [])\
              """
     end
 
@@ -101,7 +103,8 @@ defmodule KinoDB.SQLCellTest do
         "connection" => %{"variable" => "conn", "type" => "postgres"},
         "result_variable" => "result",
         "timeout" => nil,
-        "query" => "SELECT id FROM users\nWHERE last_name = 'Sherlock'"
+        "query" => "SELECT id FROM users\nWHERE last_name = 'Sherlock'",
+        "data_frame_alias" => Explorer.DataFrame
       }
 
       assert SQLCell.to_source(attrs) == ~s'''
@@ -164,7 +167,7 @@ defmodule KinoDB.SQLCellTest do
 
       assert SQLCell.to_source(put_in(attrs["connection"]["type"], "snowflake")) == ~s'''
              result =
-               Adbc.Connection.query!(
+               Explorer.DataFrame.from_query!(
                  conn,
                  """
                  SELECT id FROM users
@@ -180,7 +183,8 @@ defmodule KinoDB.SQLCellTest do
         "connection" => %{"variable" => "conn", "type" => "postgres"},
         "result_variable" => "result",
         "timeout" => nil,
-        "query" => ~s/SELECT id FROM users WHERE id {{user_id}} AND name LIKE {{search <> "%"}}/
+        "query" => ~s/SELECT id FROM users WHERE id {{user_id}} AND name LIKE {{search <> "%"}}/,
+        "data_frame_alias" => Explorer.DataFrame
       }
 
       assert SQLCell.to_source(attrs) == ~s'''
@@ -224,10 +228,11 @@ defmodule KinoDB.SQLCellTest do
 
       assert SQLCell.to_source(put_in(attrs["connection"]["type"], "snowflake")) == ~s'''
              result =
-               Adbc.Connection.query!(conn, "SELECT id FROM users WHERE id ?1 AND name LIKE ?2", [
-                 user_id,
-                 search <> "%"
-               ])\
+               Explorer.DataFrame.from_query!(
+                 conn,
+                 "SELECT id FROM users WHERE id ?1 AND name LIKE ?2",
+                 [user_id, search <> \"%\"]
+               )\
              '''
     end
 
@@ -240,7 +245,8 @@ defmodule KinoDB.SQLCellTest do
         SELECT id from users
         -- WHERE id = {{user_id1}}
         /* WHERE id = {{user_id2}} */ WHERE id = {{user_id3}}\
-        """
+        """,
+        "data_frame_alias" => Explorer.DataFrame
       }
 
       assert SQLCell.to_source(attrs) == ~s'''
@@ -308,7 +314,7 @@ defmodule KinoDB.SQLCellTest do
 
       assert SQLCell.to_source(put_in(attrs["connection"]["type"], "snowflake")) == ~s'''
              result =
-               Adbc.Connection.query!(
+               Explorer.DataFrame.from_query!(
                  conn,
                  """
                  SELECT id from users
@@ -325,7 +331,8 @@ defmodule KinoDB.SQLCellTest do
         "connection" => %{"variable" => "conn", "type" => "postgres"},
         "result_variable" => "result",
         "timeout" => 30,
-        "query" => "SELECT id FROM users"
+        "query" => "SELECT id FROM users",
+        "data_frame_alias" => Explorer.DataFrame
       }
 
       assert SQLCell.to_source(attrs) == """
@@ -349,7 +356,7 @@ defmodule KinoDB.SQLCellTest do
              """
 
       assert SQLCell.to_source(put_in(attrs["connection"]["type"], "snowflake")) == """
-             result = Adbc.Connection.query!(conn, "SELECT id FROM users", [])\
+             result = Explorer.DataFrame.from_query!(conn, "SELECT id FROM users", [])\
              """
     end
 
@@ -358,7 +365,8 @@ defmodule KinoDB.SQLCellTest do
         "connection" => %{"variable" => "conn", "type" => "postgres"},
         "result_variable" => "result",
         "cache_query" => true,
-        "query" => "SELECT id FROM users"
+        "query" => "SELECT id FROM users",
+        "data_frame_alias" => DF
       }
 
       assert SQLCell.to_source(attrs) == """
@@ -371,6 +379,10 @@ defmodule KinoDB.SQLCellTest do
 
       assert SQLCell.to_source(put_in(attrs["connection"]["type"], "sqlite")) == """
              result = Exqlite.query!(conn, "SELECT id FROM users", [])\
+             """
+
+      assert SQLCell.to_source(put_in(attrs["connection"]["type"], "snowflake")) == """
+             result = DF.from_query!(conn, "SELECT id FROM users", [])\
              """
 
       assert SQLCell.to_source(put_in(attrs["connection"]["type"], "bigquery")) == """
