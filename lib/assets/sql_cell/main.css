@@ -12,6 +12,9 @@
   --gray-600: #445668;
   --gray-800: #1c2a3a;
 
+  --yellow-100: #fff7ec;
+  --yellow-600: #ffa83f;
+
   --blue-100: #ecf0ff;
   --blue-600: #3e64ff;
 }
@@ -194,6 +197,31 @@ select.input {
 
 .info-box p:first-child {
   padding-top: 0;
+}
+
+.box {
+  margin-bottom: 24px;
+  padding: 16px;
+  border-radius: 0.5rem;
+  font-size: 0.875rem;
+  color: var(--gray-700);
+  border: solid 1px var(--gray-300);
+}
+
+.box > *:not(:first-child) {
+  margin-top: 1rem;
+}
+
+.box pre code {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 14px;
+  color: var(--gray-900);
+}
+
+.box.box-warning {
+  color: var(--gray-900);
+  background-color: var(--yellow-100);
+  border-color: var(--yellow-600);
 }
 
 .strong {

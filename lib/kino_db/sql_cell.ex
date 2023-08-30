@@ -9,17 +9,20 @@ defmodule KinoDB.SQLCell do
 
   @impl true
   def init(attrs, ctx) do
+    connection =
+      if conn_attrs = attrs["connection"] do
+        %{variable: conn_attrs["variable"], type: conn_attrs["type"]}
+      end
+
     ctx =
       assign(ctx,
         connections: [],
-        connection:
-          if conn_attrs = attrs["connection"] do
-            %{variable: conn_attrs["variable"], type: conn_attrs["type"]}
-          end,
+        connection: connection,
         result_variable: Kino.SmartCell.prefixed_var_name("result", attrs["result_variable"]),
         timeout: attrs["timeout"],
         cache_query: attrs["cache_query"] || true,
-        data_frame_alias: Explorer.DataFrame
+        data_frame_alias: Explorer.DataFrame,
+        missing_dep: missing_dep(connection)
       )
 
     {:ok, ctx, editor: [attribute: "query", language: "sql", default_source: @default_query]}
@@ -33,7 +36,8 @@ defmodule KinoDB.SQLCell do
       result_variable: ctx.assigns.result_variable,
       timeout: ctx.assigns.timeout,
       cache_query: ctx.assigns.cache_query,
-      data_frame_alias: ctx.assigns.data_frame_alias
+      data_frame_alias: ctx.assigns.data_frame_alias,
+      missing_dep: ctx.assigns.missing_dep
     }
 
     {:ok, payload, ctx}
@@ -43,7 +47,18 @@ defmodule KinoDB.SQLCell do
   def handle_event("update_connection", variable, ctx) do
     connection = Enum.find(ctx.assigns.connections, &(&1.variable == variable))
     ctx = assign(ctx, connection: connection)
+    missing_dep = missing_dep(connection)
+
+    ctx =
+      if missing_dep == ctx.assigns.missing_dep do
+        ctx
+      else
+        broadcast_event(ctx, "missing_dep", %{"dep" => missing_dep})
+        assign(ctx, missing_dep: missing_dep)
+      end
+
     broadcast_event(ctx, "update_connection", connection.variable)
+
     {:noreply, ctx}
   end
 
@@ -94,6 +109,15 @@ defmodule KinoDB.SQLCell do
   @impl true
   def handle_info({:connections, connections, data_frame_alias}, ctx) do
     connection = search_connection(connections, ctx.assigns.connection)
+    missing_dep = missing_dep(connection)
+
+    ctx =
+      if missing_dep == ctx.assigns.missing_dep do
+        ctx
+      else
+        broadcast_event(ctx, "missing_dep", %{"dep" => missing_dep})
+        assign(ctx, missing_dep: missing_dep)
+      end
 
     broadcast_event(ctx, "connections", %{
       "connections" => connections,
@@ -147,7 +171,6 @@ defmodule KinoDB.SQLCell do
 
   defp connection_type_from_adbc(connection) when is_pid(connection) do
     with true <- Code.ensure_loaded?(Adbc),
-         true <- Code.ensure_loaded?(Explorer),
          {:ok, driver} <- Adbc.Connection.get_driver(connection) do
       Atom.to_string(driver)
     else
@@ -318,4 +341,12 @@ defmodule KinoDB.SQLCell do
       nil -> Explorer.DataFrame
     end
   end
+
+  defp missing_dep(%{type: "snowflake"}) do
+    unless Code.ensure_loaded?(Explorer) do
+      ~s|{:explorer, "~> 0.7.0"}|
+    end
+  end
+
+  defp missing_dep(_), do: nil
 end
