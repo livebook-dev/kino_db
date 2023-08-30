@@ -347,6 +347,10 @@ defmodule KinoDB.SQLCellTest do
       assert SQLCell.to_source(put_in(attrs["connection"]["type"], "athena")) == """
              result = Req.post!(conn, athena: {"SELECT id FROM users", []}).body\
              """
+
+      assert SQLCell.to_source(put_in(attrs["connection"]["type"], "snowflake")) == """
+             result = Adbc.Connection.query!(conn, "SELECT id FROM users", [])\
+             """
     end
 
     test "passes cache_query option when supported" do
