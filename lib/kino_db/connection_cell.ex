@@ -40,7 +40,9 @@ defmodule KinoDB.ConnectionCell do
       "token" => attrs["token"] || "",
       "region" => attrs["region"] || "us-east-1",
       "workgroup" => attrs["workgroup"] || "",
-      "output_location" => attrs["output_location"] || ""
+      "output_location" => attrs["output_location"] || "",
+      "account" => attrs["account"] || "",
+      "schema" => attrs["schema"] || ""
     }
 
     ctx =
@@ -129,6 +131,11 @@ defmodule KinoDB.ConnectionCell do
             else:
               ~w|access_key_id secret_access_key token region workgroup output_location database|
 
+        "snowflake" ->
+          if fields["use_password_secret"],
+            do: ~w|database schema account username password_secret|,
+            else: ~w|database schema account username password|
+
         type when type in ["postgres", "mysql"] ->
           if fields["use_password_secret"],
             do: ~w|database hostname port use_ipv6 username password_secret|,
@@ -156,6 +163,12 @@ defmodule KinoDB.ConnectionCell do
                 do: ~w|access_key_id secret_access_key region database|,
                 else: ~w|access_key_id secret_access_key_secret region database|
               )
+
+        "snowflake" ->
+          if(Map.has_key?(attrs, "password_secret"),
+            do: ~w|account username password_secret|,
+            else: ~w|account username password|
+          )
 
         type when type in ["postgres", "mysql"] ->
           ~w|hostname port|
@@ -190,6 +203,17 @@ defmodule KinoDB.ConnectionCell do
       opts = [database: unquote(attrs["database_path"])]
 
       {:ok, unquote(quoted_var(attrs["variable"]))} = Kino.start_child({Exqlite, opts})
+    end
+  end
+
+  defp to_quoted(%{"type" => "snowflake"} = attrs) do
+    var = quoted_var(attrs["variable"])
+
+    quote do
+      :ok = Adbc.download_driver!(:snowflake)
+      uri = unquote(build_snowflake_uri(attrs))
+      {:ok, db} = Kino.start_child({Adbc.Database, driver: :snowflake, uri: uri})
+      {:ok, unquote(var)} = Kino.start_child({Adbc.Connection, database: db})
     end
   end
 
@@ -324,6 +348,7 @@ defmodule KinoDB.ConnectionCell do
       Code.ensure_loaded?(Exqlite) -> "sqlite"
       Code.ensure_loaded?(ReqBigQuery) -> "bigquery"
       Code.ensure_loaded?(ReqAthena) -> "athena"
+      Code.ensure_loaded?(Adbc) -> "snowflake"
       true -> "postgres"
     end
   end
@@ -355,6 +380,12 @@ defmodule KinoDB.ConnectionCell do
   defp missing_dep(%{"type" => "athena"}) do
     unless Code.ensure_loaded?(ReqAthena) do
       ~s|{:req_athena, "~> 0.1.1"}|
+    end
+  end
+
+  defp missing_dep(%{"type" => "snowflake"}) do
+    unless Code.ensure_loaded?(Adbc) do
+      ~s|{:adbc, "~> 0.1.0"}|
     end
   end
 
@@ -397,4 +428,27 @@ defmodule KinoDB.ConnectionCell do
          do: true,
          else: (_ -> false)
   end
+
+  defp build_snowflake_uri(attrs), do: build_snowflake_uri(attrs, quoted_pass(attrs))
+
+  defp build_snowflake_uri(attrs, password) when is_binary(password) do
+    "#{attrs["username"]}:#{password}@#{attrs["account"]}"
+    |> build_database_and_schema(attrs)
+  end
+
+  defp build_snowflake_uri(%{"username" => username, "account" => account} = attrs, password) do
+    rest = build_database_and_schema("@#{account}", attrs)
+
+    quote do
+      unquote("#{username}:") <> unquote(password) <> unquote(rest)
+    end
+  end
+
+  defp build_database_and_schema(uri, %{"database" => ""}), do: uri
+
+  defp build_database_and_schema(uri, %{"database" => database, "schema" => ""}),
+    do: "#{uri}/#{database}"
+
+  defp build_database_and_schema(uri, %{"database" => database, "schema" => schema}),
+    do: "#{uri}/#{database}/#{schema}"
 end

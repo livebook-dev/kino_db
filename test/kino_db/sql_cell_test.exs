@@ -90,6 +90,10 @@ defmodule KinoDB.SQLCellTest do
       assert SQLCell.to_source(put_in(attrs["connection"]["type"], "athena")) == """
              result = Req.post!(conn, athena: {\"SELECT id FROM users\", []}).body\
              """
+
+      assert SQLCell.to_source(put_in(attrs["connection"]["type"], "snowflake")) == """
+             result = Adbc.Connection.query!(conn, "SELECT id FROM users", [])\
+             """
     end
 
     test "uses heredoc string for a multi-line query" do
@@ -157,6 +161,18 @@ defmodule KinoDB.SQLCellTest do
                     """, []}
                ).body\
              '''
+
+      assert SQLCell.to_source(put_in(attrs["connection"]["type"], "snowflake")) == ~s'''
+             result =
+               Adbc.Connection.query!(
+                 conn,
+                 """
+                 SELECT id FROM users
+                 WHERE last_name = 'Sherlock'
+                 """,
+                 []
+               )\
+             '''
     end
 
     test "parses parameter expressions" do
@@ -204,6 +220,14 @@ defmodule KinoDB.SQLCellTest do
                Req.post!(conn,
                  athena: {"SELECT id FROM users WHERE id ? AND name LIKE ?", [user_id, search <> "%"]}
                ).body\
+             '''
+
+      assert SQLCell.to_source(put_in(attrs["connection"]["type"], "snowflake")) == ~s'''
+             result =
+               Adbc.Connection.query!(conn, "SELECT id FROM users WHERE id ?1 AND name LIKE ?2", [
+                 user_id,
+                 search <> "%"
+               ])\
              '''
     end
 
@@ -280,6 +304,19 @@ defmodule KinoDB.SQLCellTest do
                     /* WHERE id = {{user_id2}} */ WHERE id = ?
                     """, [user_id3]}
                ).body\
+             '''
+
+      assert SQLCell.to_source(put_in(attrs["connection"]["type"], "snowflake")) == ~s'''
+             result =
+               Adbc.Connection.query!(
+                 conn,
+                 """
+                 SELECT id from users
+                 -- WHERE id = {{user_id1}}
+                 /* WHERE id = {{user_id2}} */ WHERE id = ?1
+                 """,
+                 [user_id3]
+               )\
              '''
     end
 

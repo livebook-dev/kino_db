@@ -122,7 +122,7 @@ defmodule KinoDB.SQLCell do
         _ -> nil
       end
     else
-      _ -> nil
+      _ -> connection_type_from_adbc(connection)
     end
   end
 
@@ -135,6 +135,15 @@ defmodule KinoDB.SQLCell do
   end
 
   defp connection_type(_connection), do: nil
+
+  defp connection_type_from_adbc(connection) when is_pid(connection) do
+    with true <- Code.ensure_loaded?(Adbc),
+         {:ok, driver} <- Adbc.Connection.get_driver(connection) do
+      Atom.to_string(driver)
+    else
+      _ -> nil
+    end
+  end
 
   @impl true
   def to_attrs(ctx) do
@@ -164,6 +173,10 @@ defmodule KinoDB.SQLCell do
 
   defp to_quoted(%{"connection" => %{"type" => "sqlite"}} = attrs) do
     to_quoted(attrs, quote(do: Exqlite), fn n -> "?#{n}" end)
+  end
+
+  defp to_quoted(%{"connection" => %{"type" => "snowflake"}} = attrs) do
+    to_quoted(attrs, quote(do: Adbc.Connection), fn n -> "?#{n}" end)
   end
 
   defp to_quoted(%{"connection" => %{"type" => "bigquery"}} = attrs) do
