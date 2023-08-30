@@ -29,7 +29,9 @@ defmodule KinoDB.ConnectionCellTest do
     "token" => "token",
     "region" => "region",
     "output_location" => "s3://my-bucket",
-    "workgroup" => "primary"
+    "workgroup" => "primary",
+    "account" => "account",
+    "schema" => "schema"
   }
 
   @empty_required_fields %{
@@ -162,6 +164,15 @@ defmodule KinoDB.ConnectionCellTest do
 
              :ok\
              '''
+
+      attrs = Map.delete(@attrs, "password_secret") |> Map.merge(%{"variable" => "conn"})
+
+      assert ConnectionCell.to_source(put_in(attrs["type"], "snowflake")) == ~s'''
+             :ok = Adbc.download_driver!(:snowflake)
+             uri = "admin:pass@account/default/schema"
+             {:ok, db} = Kino.start_child({Adbc.Database, driver: :snowflake, uri: uri})
+             {:ok, conn} = Kino.start_child({Adbc.Connection, database: db})\
+             '''
     end
 
     test "generates empty source code when required fields are missing" do
@@ -170,6 +181,7 @@ defmodule KinoDB.ConnectionCellTest do
       assert ConnectionCell.to_source(put_in(@empty_required_fields["type"], "sqlite")) == ""
       assert ConnectionCell.to_source(put_in(@empty_required_fields["type"], "bigquery")) == ""
       assert ConnectionCell.to_source(put_in(@empty_required_fields["type"], "athena")) == ""
+      assert ConnectionCell.to_source(put_in(@empty_required_fields["type"], "snowflake")) == ""
     end
 
     test "generates empty source code when all conditional fields are missing" do
