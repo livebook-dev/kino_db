@@ -55,9 +55,14 @@ button {
   outline: none;
 }
 
-.input--xs {
+.input--md {
   width: auto;
   min-width: 150px;
+}
+
+.input--xs {
+  width: auto;
+  max-width: 100px;
 }
 
 .input--text {
@@ -80,6 +85,8 @@ button {
   padding-right: 6px;
   font-size: 0.875rem;
   text-transform: uppercase;
+  position: relative;
+  top: 2px;
 }
 
 .input-container {
@@ -96,7 +103,7 @@ button {
 .inline-field {
   display: flex;
   flex-direction: row;
-  align-items: baseline;
+  align-items: center;
 }
 
 .nonexistent {
