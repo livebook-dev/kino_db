@@ -122,7 +122,7 @@ defmodule KinoDB.SQLCell do
         _ -> nil
       end
     else
-      _ -> connection_from_adbc(connection)
+      _ -> connection_type_from_adbc(connection)
     end
   end
 
@@ -136,10 +136,10 @@ defmodule KinoDB.SQLCell do
 
   defp connection_type(_connection), do: nil
 
-  defp connection_from_adbc(connection) when is_pid(connection) do
+  defp connection_type_from_adbc(connection) when is_pid(connection) do
     with true <- Code.ensure_loaded?(Adbc),
-         true <- is_snowflake_conn?(connection) do
-      "snowflake"
+         {:ok, driver} <- Adbc.Connection.get_driver(connection) do
+      Atom.to_string(driver)
     else
       _ -> nil
     end
@@ -284,9 +284,4 @@ defmodule KinoDB.SQLCell do
   defp parameterize(<<char::utf8, rest::binary>>, raw, params, n, next) do
     parameterize(rest, <<raw::binary, char::utf8>>, params, n, next)
   end
-
-  defp is_snowflake_conn?(conn) when conn == self(), do: false
-  defp is_snowflake_conn?(conn) when is_pid(conn), do: is_snowflake_conn?(:sys.get_state(conn))
-  defp is_snowflake_conn?(%{queue: _, lock: _, conn: conn}) when is_reference(conn), do: true
-  defp is_snowflake_conn?(_), do: false
 end

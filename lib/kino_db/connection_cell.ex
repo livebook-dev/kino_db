@@ -207,13 +207,13 @@ defmodule KinoDB.ConnectionCell do
   end
 
   defp to_quoted(%{"type" => "snowflake"} = attrs) do
+    var = quoted_var(attrs["variable"])
+
     quote do
       :ok = Adbc.download_driver!(:snowflake)
       uri = unquote(build_snowflake_uri(attrs))
       {:ok, db} = Kino.start_child({Adbc.Database, driver: :snowflake, uri: uri})
-
-      {:ok, unquote(quoted_var(attrs["variable"]))} =
-        Kino.start_child({Adbc.Connection, database: db})
+      {:ok, unquote(var)} = Kino.start_child({Adbc.Connection, database: db})
     end
   end
 
