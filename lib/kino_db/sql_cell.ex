@@ -18,7 +18,8 @@ defmodule KinoDB.SQLCell do
           end,
         result_variable: Kino.SmartCell.prefixed_var_name("result", attrs["result_variable"]),
         timeout: attrs["timeout"],
-        cache_query: attrs["cache_query"] || true
+        cache_query: attrs["cache_query"] || true,
+        data_frame_alias: Explorer.DataFrame
       )
 
     {:ok, ctx, editor: [attribute: "query", language: "sql", default_source: @default_query]}
@@ -31,7 +32,8 @@ defmodule KinoDB.SQLCell do
       connection: ctx.assigns.connection,
       result_variable: ctx.assigns.result_variable,
       timeout: ctx.assigns.timeout,
-      cache_query: ctx.assigns.cache_query
+      cache_query: ctx.assigns.cache_query,
+      data_frame_alias: ctx.assigns.data_frame_alias
     }
 
     {:ok, payload, ctx}
@@ -77,18 +79,20 @@ defmodule KinoDB.SQLCell do
   end
 
   @impl true
-  def scan_binding(pid, binding, _env) do
+  def scan_binding(pid, binding, env) do
     connections =
       for {key, value} <- binding,
           is_atom(key),
           type = connection_type(value),
           do: %{variable: Atom.to_string(key), type: type}
 
-    send(pid, {:connections, connections})
+    data_frame_alias = data_frame_alias(env)
+
+    send(pid, {:connections, connections, data_frame_alias})
   end
 
   @impl true
-  def handle_info({:connections, connections}, ctx) do
+  def handle_info({:connections, connections, data_frame_alias}, ctx) do
     connection = search_connection(connections, ctx.assigns.connection)
 
     broadcast_event(ctx, "connections", %{
@@ -96,7 +100,12 @@ defmodule KinoDB.SQLCell do
       "connection" => connection
     })
 
-    {:noreply, assign(ctx, connections: connections, connection: connection)}
+    {:noreply,
+     assign(ctx,
+       connections: connections,
+       connection: connection,
+       data_frame_alias: data_frame_alias
+     )}
   end
 
   defp search_connection([connection | _], nil), do: connection
@@ -138,6 +147,7 @@ defmodule KinoDB.SQLCell do
 
   defp connection_type_from_adbc(connection) when is_pid(connection) do
     with true <- Code.ensure_loaded?(Adbc),
+         true <- Code.ensure_loaded?(Explorer),
          {:ok, driver} <- Adbc.Connection.get_driver(connection) do
       Atom.to_string(driver)
     else
@@ -154,7 +164,8 @@ defmodule KinoDB.SQLCell do
         end,
       "result_variable" => ctx.assigns.result_variable,
       "timeout" => ctx.assigns.timeout,
-      "cache_query" => ctx.assigns.cache_query
+      "cache_query" => ctx.assigns.cache_query,
+      "data_frame_alias" => ctx.assigns.data_frame_alias
     }
   end
 
@@ -176,7 +187,7 @@ defmodule KinoDB.SQLCell do
   end
 
   defp to_quoted(%{"connection" => %{"type" => "snowflake"}} = attrs) do
-    to_quoted(attrs, quote(do: Adbc.Connection), fn n -> "?#{n}" end)
+    to_explorer_quoted(attrs, fn n -> "?#{n}" end)
   end
 
   defp to_quoted(%{"connection" => %{"type" => "bigquery"}} = attrs) do
@@ -219,6 +230,22 @@ defmodule KinoDB.SQLCell do
           unquote(quoted_var(attrs["connection"]["variable"])),
           unquote(req_opts)
         ).body
+    end
+  end
+
+  defp to_explorer_quoted(attrs, next) do
+    {query, params} = parameterize(attrs["query"], next)
+    opts_args = query_opts_args(attrs)
+    data_frame_alias = attrs["data_frame_alias"]
+
+    quote do
+      unquote(quoted_var(attrs["result_variable"])) =
+        unquote(data_frame_alias).from_query!(
+          unquote(quoted_var(attrs["connection"]["variable"])),
+          unquote(quoted_query(query)),
+          unquote(params),
+          unquote_splicing(opts_args)
+        )
     end
   end
 
@@ -283,5 +310,12 @@ defmodule KinoDB.SQLCell do
 
   defp parameterize(<<char::utf8, rest::binary>>, raw, params, n, next) do
     parameterize(rest, <<raw::binary, char::utf8>>, params, n, next)
+  end
+
+  defp data_frame_alias(%Macro.Env{aliases: aliases}) do
+    case List.keyfind(aliases, Explorer.DataFrame, 1) do
+      {data_frame_alias, _} -> data_frame_alias
+      nil -> Explorer.DataFrame
+    end
   end
 end
