@@ -258,7 +258,6 @@ defmodule KinoDB.SQLCell do
 
   defp to_explorer_quoted(attrs, next) do
     {query, params} = parameterize(attrs["query"], next)
-    opts_args = query_opts_args(attrs)
     data_frame_alias = attrs["data_frame_alias"]
 
     quote do
@@ -266,8 +265,7 @@ defmodule KinoDB.SQLCell do
         unquote(data_frame_alias).from_query!(
           unquote(quoted_var(attrs["connection"]["variable"])),
           unquote(quoted_query(query)),
-          unquote(params),
-          unquote_splicing(opts_args)
+          unquote(params)
         )
     end
   end
