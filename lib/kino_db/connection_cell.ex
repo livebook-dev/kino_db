@@ -429,11 +429,26 @@ defmodule KinoDB.ConnectionCell do
          else: (_ -> false)
   end
 
-  defp build_snowflake_uri(%{"schema" => "", "database" => ""} = attrs) do
-    "#{attrs["username"]}:#{attrs["password"]}@#{attrs["account"]}"
+  defp build_snowflake_uri(attrs), do: build_snowflake_uri(attrs, quoted_pass(attrs))
+
+  defp build_snowflake_uri(attrs, password) when is_binary(password) do
+    "#{attrs["username"]}:#{password}@#{attrs["account"]}"
+    |> build_database_and_schema(attrs)
   end
 
-  defp build_snowflake_uri(%{"schema" => ""} = attrs) do
-    "#{attrs["username"]}:#{attrs["password"]}@#{attrs["account"]}/#{attrs["database"]}"
+  defp build_snowflake_uri(%{"username" => username, "account" => account} = attrs, password) do
+    rest = build_database_and_schema("@#{account}", attrs)
+
+    quote do
+      unquote("#{username}:") <> unquote(password) <> unquote(rest)
+    end
   end
+
+  defp build_database_and_schema(uri, %{"database" => ""}), do: uri
+
+  defp build_database_and_schema(uri, %{"database" => database, "schema" => ""}),
+    do: "#{uri}/#{database}"
+
+  defp build_database_and_schema(uri, %{"database" => database, "schema" => schema}),
+    do: "#{uri}/#{database}/#{schema}"
 end
