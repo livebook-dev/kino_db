@@ -28,7 +28,7 @@ defmodule KinoDB.MixProject do
     [
       {:kino, "~> 0.7"},
       {:table, "~> 0.1.2"},
-      {:postgrex, "~> 0.16.3 or ~> 0.17", optional: true},
+      {:postgrex, "~> 0.17.3 or ~> 0.18", optional: true},
       {:exqlite, "~> 0.11", optional: true},
       {:myxql, "~> 0.6.2 or ~> 0.7", optional: true},
       {:db_connection, "~> 2.4.2", optional: true},

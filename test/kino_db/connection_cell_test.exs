@@ -13,6 +13,7 @@ defmodule KinoDB.ConnectionCellTest do
     "hostname" => "localhost",
     "port" => 4444,
     "use_ipv6" => false,
+    "use_ssl" => false,
     "username" => "admin",
     "password" => "pass",
     "use_password_secret" => false,
@@ -82,6 +83,21 @@ defmodule KinoDB.ConnectionCellTest do
                password: "pass",
                database: "default",
                socket_options: [:inet6]
+             ]
+
+             {:ok, db} = Kino.start_child({Postgrex, opts})\
+             '''
+
+      attrs = Map.put(@attrs, "use_ssl", true)
+
+      assert ConnectionCell.to_source(attrs) === ~s'''
+             opts = [
+               hostname: "localhost",
+               port: 4444,
+               username: "admin",
+               password: "pass",
+               database: "default",
+               ssl: true
              ]
 
              {:ok, db} = Kino.start_child({Postgrex, opts})\

@@ -24,6 +24,7 @@ defmodule KinoDB.ConnectionCell do
       "database_path" => attrs["database_path"] || "",
       "port" => attrs["port"] || default_port,
       "use_ipv6" => Map.get(attrs, "use_ipv6", false),
+      "use_ssl" => Map.get(attrs, "use_ssl", false),
       "username" => attrs["username"] || "",
       "password" => password,
       "use_password_secret" => Map.has_key?(attrs, "password_secret") || password == "",
@@ -138,8 +139,8 @@ defmodule KinoDB.ConnectionCell do
 
         type when type in ["postgres", "mysql"] ->
           if fields["use_password_secret"],
-            do: ~w|database hostname port use_ipv6 username password_secret|,
-            else: ~w|database hostname port use_ipv6 username password|
+            do: ~w|database hostname port use_ipv6 use_ssl username password_secret|,
+            else: ~w|database hostname port use_ipv6 use_ssl username password|
       end
 
     Map.take(fields, @default_keys ++ connection_keys)
@@ -322,6 +323,13 @@ defmodule KinoDB.ConnectionCell do
       database: attrs["database"]
     ]
 
+    opts =
+      if attrs["use_ssl"] do
+        opts ++ [ssl: attrs["use_ssl"]]
+      else
+        opts
+      end
+
     if attrs["use_ipv6"] do
       opts ++ [socket_options: [:inet6]]
     else
@@ -355,7 +363,7 @@ defmodule KinoDB.ConnectionCell do
 
   defp missing_dep(%{"type" => "postgres"}) do
     unless Code.ensure_loaded?(Postgrex) do
-      ~s/{:postgrex, "~> 0.16.3"}/
+      ~s/{:postgrex, "~> 0.17.3"}/
     end
   end
 
