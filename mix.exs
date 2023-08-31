@@ -32,7 +32,7 @@ defmodule KinoDB.MixProject do
       {:exqlite, "~> 0.11", optional: true},
       {:myxql, "~> 0.6.2 or ~> 0.7", optional: true},
       {:db_connection, "~> 2.4.2", optional: true},
-      {:adbc, github: "elixir-explorer/adbc", branch: "main", optional: true, override: true},
+      {:adbc, "~> 0.1.1", optional: true},
       {:explorer, "~> 0.7.0", optional: true},
       {:req_bigquery, "~> 0.1.0", optional: true},
       {:req_athena, "~> 0.1.1", optional: true},
