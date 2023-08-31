@@ -198,7 +198,6 @@ defmodule KinoDB.ConnectionCell do
     quote do
       opts = unquote(shared_options(attrs))
 
-      if opts[:ssl] == true, do: :ssl.start()
       {:ok, unquote(quoted_var(attrs["variable"]))} = Kino.start_child({Postgrex, opts})
     end
   end
@@ -207,7 +206,6 @@ defmodule KinoDB.ConnectionCell do
     quote do
       opts = unquote(shared_options(attrs))
 
-      if opts[:ssl] == true, do: :ssl.start()
       {:ok, unquote(quoted_var(attrs["variable"]))} = Kino.start_child({MyXQL, opts})
     end
   end
