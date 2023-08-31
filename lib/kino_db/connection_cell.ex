@@ -338,7 +338,7 @@ defmodule KinoDB.ConnectionCell do
 
   defp missing_dep(%{"type" => "postgres"}) do
     unless Code.ensure_loaded?(Postgrex) do
-      ~s/{:postgrex, "~> 0.16.3"}/
+      ~s/{:postgrex, "~> 0.17.3"}/
     end
   end
 
