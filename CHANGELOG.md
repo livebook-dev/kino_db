@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- SQL Server integration
+- SQL Server integration ([#65](https://github.com/livebook-dev/kino_db/pull/65))
 
 ## [v0.2.2](https://github.com/livebook-dev/kino_db/tree/v0.2.2) (2023-08-31)
 
