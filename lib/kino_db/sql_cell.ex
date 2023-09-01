@@ -262,7 +262,7 @@ defmodule KinoDB.SQLCell do
   end
 
   defp to_explorer_quoted(attrs, next) do
-    {query, params} = parameterize(attrs["query"], next)
+    {query, params} = parameterize(attrs["query"], attrs["connection"]["type"], next)
     data_frame_alias = attrs["data_frame_alias"]
 
     quote do
