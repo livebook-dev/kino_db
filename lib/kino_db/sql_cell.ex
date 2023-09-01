@@ -340,7 +340,11 @@ defmodule KinoDB.SQLCell do
   end
 
   defp quote_param("sqlserver", inner, sql_param) do
-    Code.string_to_quoted("%Tds.Parameter{name: \"#{sql_param}\", value: #{inner}}")
+    inner_ast = Code.string_to_quoted(inner)
+    
+    quote do
+      %Tds.Parameter{name: sql_param, value: unquote(inner_ast)}
+    end
   end
 
   defp quote_param(_type, inner, _sql_param) do
