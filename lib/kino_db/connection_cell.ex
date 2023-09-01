@@ -140,8 +140,8 @@ defmodule KinoDB.ConnectionCell do
 
         "sqlserver" ->
           if fields["use_password_secret"],
-            do: ~w|database hostname port use_ipv6 username password_secret ssl instance|,
-            else: ~w|database hostname port use_ipv6 username password ssl instance|
+            do: ~w|database hostname port use_ipv6 username password_secret use_ssl instance|,
+            else: ~w|database hostname port use_ipv6 username password use_ssl instance|
 
         type when type in ["postgres", "mysql"] ->
           if fields["use_password_secret"],
