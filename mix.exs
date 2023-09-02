@@ -27,16 +27,20 @@ defmodule KinoDB.MixProject do
   defp deps do
     [
       {:kino, "~> 0.7"},
-      {:table, "~> 0.1.2"},
+      {:table, "~> 0.1"},
       {:postgrex, "~> 0.17.3 or ~> 0.18", optional: true},
       {:exqlite, "~> 0.11", optional: true},
       {:myxql, "~> 0.6.2 or ~> 0.7", optional: true},
       {:tds, "~> 2.0", optional: true},
-      {:db_connection, "~> 2.4.2", optional: true},
+      {:db_connection, "~> 2.4.2 or ~> 2.5", optional: true},
+
+      # Those dependecies are new, so we use stricter versions
       {:adbc, "~> 0.1.1", optional: true},
       {:explorer, "~> 0.7.0", optional: true},
       {:req_bigquery, "~> 0.1.0", optional: true},
       {:req_athena, "~> 0.1.1", optional: true},
+
+      # Dev only
       {:ex_doc, "~> 0.28", only: :dev, runtime: false}
     ]
   end
