@@ -394,37 +394,37 @@ defmodule KinoDB.ConnectionCell do
 
   defp missing_dep(%{"type" => "postgres"}) do
     unless Code.ensure_loaded?(Postgrex) do
-      ~s/{:postgrex, "~> 0.17.3"}/
+      ~s/{:postgrex, "~> 0.17"}/
     end
   end
 
   defp missing_dep(%{"type" => "mysql"}) do
     unless Code.ensure_loaded?(MyXQL) do
-      ~s/{:myxql, "~> 0.6.2"}/
+      ~s/{:myxql, "~> 0.6"}/
     end
   end
 
   defp missing_dep(%{"type" => "sqlite"}) do
     unless Code.ensure_loaded?(Exqlite) do
-      ~s/{:exqlite, "~> 0.11.0"}/
+      ~s/{:exqlite, "~> 0.11"}/
     end
   end
 
   defp missing_dep(%{"type" => "bigquery"}) do
     unless Code.ensure_loaded?(ReqBigQuery) do
-      ~s|{:req_bigquery, "~> 0.1.0"}|
+      ~s|{:req_bigquery, "~> 0.1"}|
     end
   end
 
   defp missing_dep(%{"type" => "athena"}) do
     unless Code.ensure_loaded?(ReqAthena) do
-      ~s|{:req_athena, "~> 0.1.1"}|
+      ~s|{:req_athena, "~> 0.1"}|
     end
   end
 
   defp missing_dep(%{"type" => "snowflake"}) do
     unless Code.ensure_loaded?(Adbc) do
-      ~s|{:adbc, "~> 0.1.0"}|
+      ~s|{:adbc, "~> 0.1"}|
     end
   end
 

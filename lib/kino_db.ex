@@ -3,7 +3,8 @@ results = [
   MyXQL.Result,
   Exqlite.Result,
   ReqBigQuery.Result,
-  ReqAthena.Result
+  ReqAthena.Result,
+  Tds.Result
 ]
 
 for mod <- results do
