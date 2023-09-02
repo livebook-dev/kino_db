@@ -96,6 +96,10 @@ defmodule KinoDB.SQLCellTest do
       assert SQLCell.to_source(put_in(attrs["connection"]["type"], "snowflake")) == """
              result = Explorer.DataFrame.from_query!(conn, "SELECT id FROM users", [])\
              """
+
+      assert SQLCell.to_source(put_in(attrs["connection"]["type"], "sqlserver")) == """
+             result = Tds.query!(conn, "SELECT id FROM users", [])\
+             """
     end
 
     test "uses heredoc string for a multi-line query" do
@@ -176,6 +180,18 @@ defmodule KinoDB.SQLCellTest do
                  []
                )\
              '''
+
+      assert SQLCell.to_source(put_in(attrs["connection"]["type"], "sqlserver")) == ~s'''
+             result =
+               Tds.query!(
+                 conn,
+                 """
+                 SELECT id FROM users
+                 WHERE last_name = 'Sherlock'
+                 """,
+                 []
+               )\
+             '''
     end
 
     test "parses parameter expressions" do
@@ -233,6 +249,14 @@ defmodule KinoDB.SQLCellTest do
                  "SELECT id FROM users WHERE id ?1 AND name LIKE ?2",
                  [user_id, search <> \"%\"]
                )\
+             '''
+
+      assert SQLCell.to_source(put_in(attrs["connection"]["type"], "sqlserver")) == ~s'''
+             result =
+               Tds.query!(conn, "SELECT id FROM users WHERE id @1 AND name LIKE @2", [
+                 %Tds.Parameter{name: "@1", value: user_id},
+                 %Tds.Parameter{name: "@2", value: search <> "%"}
+               ])\
              '''
     end
 
@@ -324,6 +348,19 @@ defmodule KinoDB.SQLCellTest do
                  [user_id3]
                )\
              '''
+
+      assert SQLCell.to_source(put_in(attrs["connection"]["type"], "sqlserver")) == ~s'''
+             result =
+               Tds.query!(
+                 conn,
+                 """
+                 SELECT id from users
+                 -- WHERE id = {{user_id1}}
+                 /* WHERE id = {{user_id2}} */ WHERE id = @1
+                 """,
+                 [%Tds.Parameter{name: "@1", value: user_id3}]
+               )\
+             '''
     end
 
     test "passes timeout option when a timeout is specified" do
@@ -357,6 +394,10 @@ defmodule KinoDB.SQLCellTest do
 
       assert SQLCell.to_source(put_in(attrs["connection"]["type"], "snowflake")) == """
              result = Explorer.DataFrame.from_query!(conn, "SELECT id FROM users", [])\
+             """
+
+      assert SQLCell.to_source(put_in(attrs["connection"]["type"], "sqlserver")) == """
+             result = Tds.query!(conn, "SELECT id FROM users", [], timeout: 30000)\
              """
     end
 
@@ -397,6 +438,10 @@ defmodule KinoDB.SQLCellTest do
 
       assert SQLCell.to_source(put_in(athena["cache_query"], false)) == """
              result = Req.post!(conn, athena: {"SELECT id FROM users", []}, cache_query: false).body\
+             """
+
+      assert SQLCell.to_source(put_in(attrs["connection"]["type"], "sqlserver")) == """
+             result = Tds.query!(conn, "SELECT id FROM users", [])\
              """
     end
   end
