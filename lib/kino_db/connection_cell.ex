@@ -245,7 +245,7 @@ defmodule KinoDB.ConnectionCell do
 
   defp to_quoted(%{"type" => "sqlserver"} = attrs) do
     quote do
-      opts = unquote(shared_options(attrs)) ++ unquote(sqlserver_options(attrs))
+      opts = unquote(shared_options(attrs) ++ sqlserver_options(attrs))
 
       {:ok, unquote(quoted_var(attrs["variable"]))} = Kino.start_child({Tds, opts})
     end
@@ -357,14 +357,11 @@ defmodule KinoDB.ConnectionCell do
   defp sqlserver_options(attrs) do
     instance = attrs["instance"]
 
-    opts =
-      if instance && instance != "" do
-        [instance: instance]
-      else
-        []
-      end
-
-    opts ++ [ssl: Map.has_key?(attrs, "use_ssl")]
+    if instance && instance != "" do
+      [instance: instance]
+    else
+      []
+    end
   end
 
   defp quoted_var(string), do: {String.to_atom(string), [], nil}
