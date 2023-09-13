@@ -350,7 +350,7 @@ defmodule KinoDB.ConnectionCell do
     if attrs["use_ipv6"] do
       opts ++ [socket_options: [:inet6]]
     else
-      opts ++ []
+      opts
     end
   end
 
