@@ -357,7 +357,7 @@ defmodule KinoDB.ConnectionCell do
   defp sqlserver_options(attrs) do
     instance = attrs["instance"]
 
-    opts =
+    _opts =
       if instance && instance != "" do
         [instance: instance]
       else
