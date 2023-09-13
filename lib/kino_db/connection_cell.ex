@@ -357,12 +357,11 @@ defmodule KinoDB.ConnectionCell do
   defp sqlserver_options(attrs) do
     instance = attrs["instance"]
 
-    _opts =
-      if instance && instance != "" do
-        [instance: instance]
-      else
-        []
-      end
+    if instance && instance != "" do
+      [instance: instance]
+    else
+      []
+    end
   end
 
   defp quoted_var(string), do: {String.to_atom(string), [], nil}
