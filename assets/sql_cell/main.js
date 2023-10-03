@@ -1,4 +1,5 @@
-import * as Vue from "https://cdn.jsdelivr.net/npm/vue@3.2.26/dist/vue.esm-browser.prod.js";
+import { createApp } from "vue/dist/vue.esm-browser.prod.js";
+import "./main.css";
 
 export function init(ctx, payload) {
   ctx.importCSS("main.css");
@@ -177,7 +178,7 @@ export function init(ctx, payload) {
     `,
   };
 
-  const app = Vue.createApp({
+  const app = createApp({
     components: {
       BaseSelect: BaseSelect,
       BaseInput: BaseInput,

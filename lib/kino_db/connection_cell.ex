@@ -3,7 +3,7 @@ defmodule KinoDB.ConnectionCell do
 
   # A smart cell used to establish connection to a database.
 
-  use Kino.JS, assets_path: "lib/assets/connection_cell"
+  use Kino.JS, assets_path: "lib/assets/connection_cell/build"
   use Kino.JS.Live
   use Kino.SmartCell, name: "Database connection"
 

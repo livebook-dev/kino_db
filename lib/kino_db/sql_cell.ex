@@ -1,7 +1,7 @@
 defmodule KinoDB.SQLCell do
   @moduledoc false
 
-  use Kino.JS, assets_path: "lib/assets/sql_cell"
+  use Kino.JS, assets_path: "lib/assets/sql_cell/build"
   use Kino.JS.Live
   use Kino.SmartCell, name: "SQL query"
 

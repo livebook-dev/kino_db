@@ -1,0 +1,13 @@
+{
+  "private": true,
+  "scripts": {
+    "build": "esbuild main.js --bundle --minify --outfile=../../lib/assets/connection_cell/build/main.js --format=esm",
+    "dev": "esbuild main.js --bundle --minify --outfile=../../lib/assets/connection_cell/build/main.js --format=esm --watch"
+  },
+  "dependencies": {
+    "vue": "^3.3.4"
+  },
+  "devDependencies": {
+    "esbuild": "^0.19.4"
+  }
+}
