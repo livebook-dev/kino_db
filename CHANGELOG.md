@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v0.2.6](https://github.com/livebook-dev/kino_db/tree/v0.2.5) (2024-02-08)
+
+### Changed
+
+- Allow Explorer 0.8.0+
+
 ## [v0.2.5](https://github.com/livebook-dev/kino_db/tree/v0.2.5) (2023-10-18)
 
 ### Changed
