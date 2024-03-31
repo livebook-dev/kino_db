@@ -1,7 +1,7 @@
 defmodule KinoDB.MixProject do
   use Mix.Project
 
-  @version "0.2.6"
+  @version "0.2.7"
   @description "Databases integration with Livebook"
 
   def project do
