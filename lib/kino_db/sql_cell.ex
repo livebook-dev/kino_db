@@ -198,6 +198,7 @@ defmodule KinoDB.SQLCell do
     attrs |> to_quoted() |> Kino.SmartCell.quoted_to_string()
   end
 
+  # DBConnection-based
   defp to_quoted(%{"connection" => %{"type" => "postgres"}} = attrs) do
     to_quoted(attrs, quote(do: Postgrex), fn n -> "$#{n}" end)
   end
@@ -210,14 +211,16 @@ defmodule KinoDB.SQLCell do
     to_quoted(attrs, quote(do: Exqlite), fn n -> "?#{n}" end)
   end
 
-  defp to_quoted(%{"connection" => %{"type" => "snowflake"}} = attrs) do
-    to_explorer_quoted(attrs, fn n -> "?#{n}" end)
-  end
-
   defp to_quoted(%{"connection" => %{"type" => "sqlserver"}} = attrs) do
     to_quoted(attrs, quote(do: Tds), fn n -> "@#{n}" end)
   end
 
+  # Explorer-based
+  defp to_quoted(%{"connection" => %{"type" => "snowflake"}} = attrs) do
+    to_explorer_quoted(attrs, fn n -> "?#{n}" end)
+  end
+
+  # Req-based
   defp to_quoted(%{"connection" => %{"type" => "bigquery"}} = attrs) do
     to_req_quoted(attrs, fn _n -> "?" end, :bigquery)
   end
@@ -361,7 +364,7 @@ defmodule KinoDB.SQLCell do
 
   defp missing_dep(%{type: "snowflake"}) do
     unless Code.ensure_loaded?(Explorer) do
-      ~s|{:explorer, "~> 0.7.0"}|
+      ~s|{:explorer, "~> 0.8"}|
     end
   end
 

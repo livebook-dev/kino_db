@@ -421,7 +421,7 @@ defmodule KinoDB.ConnectionCell do
 
   defp missing_dep(%{"type" => "snowflake"}) do
     unless Code.ensure_loaded?(Adbc) do
-      ~s|{:adbc, "~> 0.1"}|
+      ~s|{:adbc, "~> 0.3"}|
     end
   end
 
