@@ -220,6 +220,10 @@ defmodule KinoDB.SQLCell do
     to_explorer_quoted(attrs, fn n -> "?#{n}" end)
   end
 
+  defp to_quoted(%{"connection" => %{"type" => "duckdb"}} = attrs) do
+    to_explorer_quoted(attrs, fn n -> "?#{n}" end)
+  end
+
   # Req-based
   defp to_quoted(%{"connection" => %{"type" => "bigquery"}} = attrs) do
     to_req_quoted(attrs, fn _n -> "?" end, :bigquery)
@@ -362,7 +366,7 @@ defmodule KinoDB.SQLCell do
     end
   end
 
-  defp missing_dep(%{type: "snowflake"}) do
+  defp missing_dep(%{type: adbc}) when adbc in ~w[snowflake duckdb] do
     unless Code.ensure_loaded?(Explorer) do
       ~s|{:explorer, "~> 0.8"}|
     end

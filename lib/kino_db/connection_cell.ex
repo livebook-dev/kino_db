@@ -123,6 +123,9 @@ defmodule KinoDB.ConnectionCell do
         "sqlite" ->
           ~w|database_path|
 
+        "duckdb" ->
+          ~w|database_path|
+
         "bigquery" ->
           ~w|project_id default_dataset_id credentials|
 
@@ -157,6 +160,9 @@ defmodule KinoDB.ConnectionCell do
     required_keys =
       case attrs["type"] do
         "sqlite" ->
+          ~w|database_path|
+
+        "duckdb" ->
           ~w|database_path|
 
         "bigquery" ->
@@ -223,6 +229,17 @@ defmodule KinoDB.ConnectionCell do
       :ok = Adbc.download_driver!(:snowflake)
       uri = unquote(build_snowflake_uri(attrs))
       {:ok, db} = Kino.start_child({Adbc.Database, driver: :snowflake, uri: uri})
+      {:ok, unquote(var)} = Kino.start_child({Adbc.Connection, database: db})
+    end
+  end
+
+  defp to_quoted(%{"type" => "duckdb"} = attrs) do
+    var = quoted_var(attrs["variable"])
+
+    quote do
+      :ok = Adbc.download_driver!(:duckdb)
+      path = unquote(attrs["database_path"])
+      {:ok, db} = Kino.start_child({Adbc.Database, driver: :duckdb, path: path})
       {:ok, unquote(var)} = Kino.start_child({Adbc.Connection, database: db})
     end
   end
@@ -383,7 +400,7 @@ defmodule KinoDB.ConnectionCell do
       Code.ensure_loaded?(Exqlite) -> "sqlite"
       Code.ensure_loaded?(ReqBigQuery) -> "bigquery"
       Code.ensure_loaded?(ReqAthena) -> "athena"
-      Code.ensure_loaded?(Adbc) -> "snowflake"
+      Code.ensure_loaded?(Adbc) -> "duckdb"
       Code.ensure_loaded?(Tds) -> "sqlserver"
       true -> "postgres"
     end
@@ -419,7 +436,7 @@ defmodule KinoDB.ConnectionCell do
     end
   end
 
-  defp missing_dep(%{"type" => "snowflake"}) do
+  defp missing_dep(%{"type" => adbc}) when adbc in ~w[snowflake duckdb] do
     unless Code.ensure_loaded?(Adbc) do
       ~s|{:adbc, "~> 0.3"}|
     end
