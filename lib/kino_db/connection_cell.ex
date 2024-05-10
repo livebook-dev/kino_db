@@ -236,7 +236,6 @@ defmodule KinoDB.ConnectionCell do
   defp to_quoted(%{"type" => "duckdb"} = attrs) do
     var = quoted_var(attrs["variable"])
     path = quoted_var(attrs["database_path"])
-    IO.inspect(path)
 
     quote do
       :ok = Adbc.download_driver!(:duckdb)
