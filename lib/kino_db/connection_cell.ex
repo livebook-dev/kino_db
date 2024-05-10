@@ -402,7 +402,7 @@ defmodule KinoDB.ConnectionCell do
       Code.ensure_loaded?(Exqlite) -> "sqlite"
       Code.ensure_loaded?(ReqBigQuery) -> "bigquery"
       Code.ensure_loaded?(ReqAthena) -> "athena"
-      Code.ensure_loaded?(Adbc) -> "snowflake"
+      Code.ensure_loaded?(Adbc) -> "duckdb"
       Code.ensure_loaded?(Tds) -> "sqlserver"
       true -> "postgres"
     end
