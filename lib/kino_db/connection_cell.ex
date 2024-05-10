@@ -163,7 +163,7 @@ defmodule KinoDB.ConnectionCell do
           ~w|database_path|
 
         "duckdb" ->
-          ~w|database_path|
+          []
 
         "bigquery" ->
           ~w|project_id|
@@ -235,6 +235,8 @@ defmodule KinoDB.ConnectionCell do
 
   defp to_quoted(%{"type" => "duckdb"} = attrs) do
     var = quoted_var(attrs["variable"])
+    path = quoted_var(attrs["database_path"])
+    IO.inspect(path)
 
     quote do
       :ok = Adbc.download_driver!(:duckdb)
@@ -400,7 +402,7 @@ defmodule KinoDB.ConnectionCell do
       Code.ensure_loaded?(Exqlite) -> "sqlite"
       Code.ensure_loaded?(ReqBigQuery) -> "bigquery"
       Code.ensure_loaded?(ReqAthena) -> "athena"
-      Code.ensure_loaded?(Adbc) -> "duckdb"
+      Code.ensure_loaded?(Adbc) -> "snowflake"
       Code.ensure_loaded?(Tds) -> "sqlserver"
       true -> "postgres"
     end
