@@ -236,16 +236,15 @@ defmodule KinoDB.ConnectionCell do
   defp to_quoted(%{"type" => "duckdb"} = attrs) do
     var = quoted_var(attrs["variable"])
 
+    opts =
+      case attrs["database_path"] do
+        "" -> [driver: :duckdb]
+        path -> [driver: :duckdb, path: path]
+      end
+
     quote do
       :ok = Adbc.download_driver!(:duckdb)
-
-      adbc_db_conf =
-        case unquote(attrs["database_path"]) do
-          "" -> {Adbc.Database, driver: :duckdb}
-          path -> {Adbc.Database, driver: :duckdb, path: path}
-        end
-
-      {:ok, db} = Kino.start_child(adbc_db_conf)
+      {:ok, db} = Kino.start_child({Adbc.Database, unquote(opts)})
       {:ok, unquote(var)} = Kino.start_child({Adbc.Connection, database: db})
     end
   end
