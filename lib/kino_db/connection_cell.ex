@@ -237,7 +237,7 @@ defmodule KinoDB.ConnectionCell do
     var = quoted_var(attrs["variable"])
 
     opts =
-      case attrs["database_path"] do
+      case String.trim(attrs["database_path"]) do
         "" -> [driver: :duckdb]
         path -> [driver: :duckdb, path: path]
       end
