@@ -25,6 +25,7 @@ defmodule KinoDB.ConnectionCell do
       "port" => attrs["port"] || default_port,
       "use_ipv6" => Map.get(attrs, "use_ipv6", false),
       "use_ssl" => Map.get(attrs, "use_ssl", false),
+      "cacertfile" => attrs["cacertfile"] || "",
       "username" => attrs["username"] || "",
       "password" => password,
       "use_password_secret" => Map.has_key?(attrs, "password_secret") || password == "",
@@ -143,13 +144,15 @@ defmodule KinoDB.ConnectionCell do
 
         "sqlserver" ->
           if fields["use_password_secret"],
-            do: ~w|database hostname port use_ipv6 username password_secret use_ssl instance|,
-            else: ~w|database hostname port use_ipv6 username password use_ssl instance|
+            do:
+              ~w|database hostname port use_ipv6 username password_secret use_ssl cacertfile instance|,
+            else:
+              ~w|database hostname port use_ipv6 username password use_ssl cacertfile instance|
 
         type when type in ["postgres", "mysql"] ->
           if fields["use_password_secret"],
-            do: ~w|database hostname port use_ipv6 use_ssl username password_secret|,
-            else: ~w|database hostname port use_ipv6 use_ssl username password|
+            do: ~w|database hostname port use_ipv6 use_ssl cacertfile username password_secret|,
+            else: ~w|database hostname port use_ipv6 use_ssl cacertfile username password|
       end
 
     Map.take(fields, @default_keys ++ connection_keys)
@@ -251,7 +254,7 @@ defmodule KinoDB.ConnectionCell do
 
   defp to_quoted(%{"type" => "postgres"} = attrs) do
     quote do
-      opts = unquote(shared_options(attrs))
+      opts = unquote(shared_options(attrs) ++ postgres_and_mysql_options(attrs))
 
       {:ok, unquote(quoted_var(attrs["variable"]))} = Kino.start_child({Postgrex, opts})
     end
@@ -259,7 +262,7 @@ defmodule KinoDB.ConnectionCell do
 
   defp to_quoted(%{"type" => "mysql"} = attrs) do
     quote do
-      opts = unquote(shared_options(attrs))
+      opts = unquote(shared_options(attrs) ++ postgres_and_mysql_options(attrs))
 
       {:ok, unquote(quoted_var(attrs["variable"]))} = Kino.start_child({MyXQL, opts})
     end
@@ -362,13 +365,6 @@ defmodule KinoDB.ConnectionCell do
       database: attrs["database"]
     ]
 
-    opts =
-      if attrs["use_ssl"] do
-        opts ++ [ssl: attrs["use_ssl"]]
-      else
-        opts
-      end
-
     if attrs["use_ipv6"] do
       opts ++ [socket_options: [:inet6]]
     else
@@ -376,13 +372,46 @@ defmodule KinoDB.ConnectionCell do
     end
   end
 
+  defp postgres_and_mysql_options(attrs) do
+    if attrs["use_ssl"] do
+      cacertfile = attrs["cacertfile"]
+
+      ssl_opts =
+        if cacertfile && cacertfile != "" do
+          [cacertfile: cacertfile]
+        else
+          [cacerts: quote(do: :public_key.cacerts_get())]
+        end
+
+      [ssl: ssl_opts]
+    else
+      []
+    end
+  end
+
   defp sqlserver_options(attrs) do
+    opts =
+      if attrs["use_ssl"] do
+        cacertfile = attrs["cacertfile"]
+
+        ssl_opts =
+          if cacertfile && cacertfile != "" do
+            [cacertfile: cacertfile]
+          else
+            [cacerts: quote(do: :public_key.cacerts_get())]
+          end
+
+        [ssl: true, ssl_opts: ssl_opts]
+      else
+        []
+      end
+
     instance = attrs["instance"]
 
     if instance && instance != "" do
-      [instance: instance]
+      opts ++ [instance: instance]
     else
-      []
+      opts
     end
   end
 
@@ -413,13 +442,13 @@ defmodule KinoDB.ConnectionCell do
 
   defp missing_dep(%{"type" => "postgres"}) do
     unless Code.ensure_loaded?(Postgrex) do
-      ~s/{:postgrex, "~> 0.17"}/
+      ~s/{:postgrex, "~> 0.18"}/
     end
   end
 
   defp missing_dep(%{"type" => "mysql"}) do
     unless Code.ensure_loaded?(MyXQL) do
-      ~s/{:myxql, "~> 0.6"}/
+      ~s/{:myxql, "~> 0.7"}/
     end
   end
 
