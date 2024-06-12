@@ -31,8 +31,8 @@ defmodule KinoDB.MixProject do
       {:adbc, "~> 0.2", optional: true},
       {:db_connection, "~> 2.4.2 or ~> 2.5", optional: true},
       {:exqlite, "~> 0.11", optional: true},
-      {:myxql, "~> 0.6.2 or ~> 0.7", optional: true},
-      {:postgrex, "~> 0.17.3 or ~> 0.18 or ~> 1.0", optional: true},
+      {:myxql, "~> 0.7", optional: true},
+      {:postgrex, "~> 0.18 or ~> 1.0", optional: true},
       {:tds, "~> 2.3.4 or ~> 2.4", optional: true},
 
       # Those dependecies are new, so we use stricter versions

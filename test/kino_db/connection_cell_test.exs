@@ -14,6 +14,7 @@ defmodule KinoDB.ConnectionCellTest do
     "port" => 4444,
     "use_ipv6" => false,
     "use_ssl" => false,
+    "cacertfile" => "",
     "username" => "admin",
     "password" => "pass",
     "use_password_secret" => false,
@@ -97,7 +98,22 @@ defmodule KinoDB.ConnectionCellTest do
                username: "admin",
                password: "pass",
                database: "default",
-               ssl: true
+               ssl: [cacerts: :public_key.cacerts_get()]
+             ]
+
+             {:ok, db} = Kino.start_child({Postgrex, opts})\
+             '''
+
+      attrs = Map.merge(@attrs, %{"use_ssl" => true, "cacertfile" => "/path/to/cacertfile"})
+
+      assert ConnectionCell.to_source(attrs) === ~s'''
+             opts = [
+               hostname: "localhost",
+               port: 4444,
+               username: "admin",
+               password: "pass",
+               database: "default",
+               ssl: [cacertfile: "/path/to/cacertfile"]
              ]
 
              {:ok, db} = Kino.start_child({Postgrex, opts})\
