@@ -14,18 +14,21 @@ defmodule KinoDB.SQLCell do
         %{variable: conn_attrs["variable"], type: conn_attrs["type"]}
       end
 
+    query = attrs["query"] || @default_query
+
     ctx =
       assign(ctx,
         connections: [],
         connection: connection,
         result_variable: Kino.SmartCell.prefixed_var_name("result", attrs["result_variable"]),
+        query: query,
         timeout: attrs["timeout"],
         cache_query: attrs["cache_query"] || true,
         data_frame_alias: Explorer.DataFrame,
         missing_dep: missing_dep(connection)
       )
 
-    {:ok, ctx, editor: [attribute: "query", language: "sql", default_source: @default_query]}
+    {:ok, ctx, editor: [source: query, language: "sql"]}
   end
 
   @impl true
@@ -41,6 +44,11 @@ defmodule KinoDB.SQLCell do
     }
 
     {:ok, payload, ctx}
+  end
+
+  @impl true
+  def handle_editor_change(source, ctx) do
+    {:ok, assign(ctx, query: source)}
   end
 
   @impl true
@@ -187,6 +195,7 @@ defmodule KinoDB.SQLCell do
           %{"variable" => connection.variable, "type" => connection.type}
         end,
       "result_variable" => ctx.assigns.result_variable,
+      "query" => ctx.assigns.query,
       "timeout" => ctx.assigns.timeout,
       "cache_query" => ctx.assigns.cache_query,
       "data_frame_alias" => ctx.assigns.data_frame_alias

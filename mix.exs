@@ -26,7 +26,7 @@ defmodule KinoDB.MixProject do
 
   defp deps do
     [
-      {:kino, "~> 0.7"},
+      {:kino, github: "livebook-dev/kino"},
       {:table, "~> 0.1"},
       {:adbc, "~> 0.2", optional: true},
       {:db_connection, "~> 2.4.2 or ~> 2.5", optional: true},
