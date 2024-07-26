@@ -296,9 +296,9 @@ defmodule KinoDB.SQLCell do
 
   defp quoted_query(query) do
     if String.contains?(query, "\n") do
-      {:<<>>, [delimiter: ~s["""]], [query <> "\n"]}
+      {:sigil_S, [delimiter: ~s["""]], [{:<<>>, [], [query <> "\n"]}, []]}
     else
-      query
+      {:sigil_S, [delimiter: ~s["]], [{:<<>>, [], [query]}, []]}
     end
   end
 

@@ -21,7 +21,7 @@ defmodule KinoDB.SQLCellTest do
 
       assert source ==
                """
-               ids_result = Postgrex.query!(db, "SELECT id FROM users", [])\
+               ids_result = Postgrex.query!(db, ~S"SELECT id FROM users", [])\
                """
     end
   end
@@ -74,31 +74,31 @@ defmodule KinoDB.SQLCellTest do
       }
 
       assert SQLCell.to_source(attrs) == """
-             result = Postgrex.query!(conn, "SELECT id FROM users", [])\
+             result = Postgrex.query!(conn, ~S"SELECT id FROM users", [])\
              """
 
       assert SQLCell.to_source(put_in(attrs["connection"]["type"], "mysql")) == """
-             result = MyXQL.query!(conn, "SELECT id FROM users", [])\
+             result = MyXQL.query!(conn, ~S"SELECT id FROM users", [])\
              """
 
       assert SQLCell.to_source(put_in(attrs["connection"]["type"], "sqlite")) == """
-             result = Exqlite.query!(conn, "SELECT id FROM users", [])\
+             result = Exqlite.query!(conn, ~S"SELECT id FROM users", [])\
              """
 
       assert SQLCell.to_source(put_in(attrs["connection"]["type"], "bigquery")) == """
-             result = Req.post!(conn, bigquery: {\"SELECT id FROM users\", []}).body\
+             result = Req.post!(conn, bigquery: {~S"SELECT id FROM users", []}).body\
              """
 
       assert SQLCell.to_source(put_in(attrs["connection"]["type"], "athena")) == """
-             result = Req.post!(conn, athena: {\"SELECT id FROM users\", []}).body\
+             result = Req.post!(conn, athena: {~S"SELECT id FROM users", []}).body\
              """
 
       assert SQLCell.to_source(put_in(attrs["connection"]["type"], "snowflake")) == """
-             result = Explorer.DataFrame.from_query!(conn, "SELECT id FROM users", [])\
+             result = Explorer.DataFrame.from_query!(conn, ~S"SELECT id FROM users", [])\
              """
 
       assert SQLCell.to_source(put_in(attrs["connection"]["type"], "sqlserver")) == """
-             result = Tds.query!(conn, "SELECT id FROM users", [])\
+             result = Tds.query!(conn, ~S"SELECT id FROM users", [])\
              """
     end
 
@@ -115,7 +115,7 @@ defmodule KinoDB.SQLCellTest do
              result =
                Postgrex.query!(
                  conn,
-                 """
+                 ~S"""
                  SELECT id FROM users
                  WHERE last_name = 'Sherlock'
                  """,
@@ -127,7 +127,7 @@ defmodule KinoDB.SQLCellTest do
              result =
                MyXQL.query!(
                  conn,
-                 """
+                 ~S"""
                  SELECT id FROM users
                  WHERE last_name = 'Sherlock'
                  """,
@@ -139,7 +139,7 @@ defmodule KinoDB.SQLCellTest do
              result =
                Exqlite.query!(
                  conn,
-                 """
+                 ~S"""
                  SELECT id FROM users
                  WHERE last_name = 'Sherlock'
                  """,
@@ -151,7 +151,7 @@ defmodule KinoDB.SQLCellTest do
              result =
                Req.post!(conn,
                  bigquery:
-                   {"""
+                   {~S"""
                     SELECT id FROM users
                     WHERE last_name = 'Sherlock'
                     """, []}
@@ -162,7 +162,7 @@ defmodule KinoDB.SQLCellTest do
              result =
                Req.post!(conn,
                  athena:
-                   {"""
+                   {~S"""
                     SELECT id FROM users
                     WHERE last_name = 'Sherlock'
                     """, []}
@@ -173,7 +173,7 @@ defmodule KinoDB.SQLCellTest do
              result =
                Explorer.DataFrame.from_query!(
                  conn,
-                 """
+                 ~S"""
                  SELECT id FROM users
                  WHERE last_name = 'Sherlock'
                  """,
@@ -185,7 +185,7 @@ defmodule KinoDB.SQLCellTest do
              result =
                Tds.query!(
                  conn,
-                 """
+                 ~S"""
                  SELECT id FROM users
                  WHERE last_name = 'Sherlock'
                  """,
@@ -205,7 +205,7 @@ defmodule KinoDB.SQLCellTest do
 
       assert SQLCell.to_source(attrs) == ~s'''
              result =
-               Postgrex.query!(conn, "SELECT id FROM users WHERE id $1 AND name LIKE $2", [
+               Postgrex.query!(conn, ~S"SELECT id FROM users WHERE id $1 AND name LIKE $2", [
                  user_id,
                  search <> "%"
                ])\
@@ -213,7 +213,7 @@ defmodule KinoDB.SQLCellTest do
 
       assert SQLCell.to_source(put_in(attrs["connection"]["type"], "mysql")) == ~s'''
              result =
-               MyXQL.query!(conn, "SELECT id FROM users WHERE id ? AND name LIKE ?", [
+               MyXQL.query!(conn, ~S"SELECT id FROM users WHERE id ? AND name LIKE ?", [
                  user_id,
                  search <> "%"
                ])\
@@ -221,7 +221,7 @@ defmodule KinoDB.SQLCellTest do
 
       assert SQLCell.to_source(put_in(attrs["connection"]["type"], "sqlite")) == ~s'''
              result =
-               Exqlite.query!(conn, "SELECT id FROM users WHERE id ?1 AND name LIKE ?2", [
+               Exqlite.query!(conn, ~S"SELECT id FROM users WHERE id ?1 AND name LIKE ?2", [
                  user_id,
                  search <> "%"
                ])\
@@ -231,14 +231,15 @@ defmodule KinoDB.SQLCellTest do
              result =
                Req.post!(conn,
                  bigquery:
-                   {"SELECT id FROM users WHERE id ? AND name LIKE ?", [user_id, search <> "%"]}
+                   {~S"SELECT id FROM users WHERE id ? AND name LIKE ?", [user_id, search <> "%"]}
                ).body\
              '''
 
       assert SQLCell.to_source(put_in(attrs["connection"]["type"], "athena")) == ~s'''
              result =
                Req.post!(conn,
-                 athena: {"SELECT id FROM users WHERE id ? AND name LIKE ?", [user_id, search <> "%"]}
+                 athena:
+                   {~S"SELECT id FROM users WHERE id ? AND name LIKE ?", [user_id, search <> "%"]}
                ).body\
              '''
 
@@ -246,14 +247,14 @@ defmodule KinoDB.SQLCellTest do
              result =
                Explorer.DataFrame.from_query!(
                  conn,
-                 "SELECT id FROM users WHERE id ?1 AND name LIKE ?2",
+                 ~S"SELECT id FROM users WHERE id ?1 AND name LIKE ?2",
                  [user_id, search <> \"%\"]
                )\
              '''
 
       assert SQLCell.to_source(put_in(attrs["connection"]["type"], "sqlserver")) == ~s'''
              result =
-               Tds.query!(conn, "SELECT id FROM users WHERE id @1 AND name LIKE @2", [
+               Tds.query!(conn, ~S"SELECT id FROM users WHERE id @1 AND name LIKE @2", [
                  %Tds.Parameter{name: "@1", value: user_id},
                  %Tds.Parameter{name: "@2", value: search <> "%"}
                ])\
@@ -277,7 +278,7 @@ defmodule KinoDB.SQLCellTest do
              result =
                Postgrex.query!(
                  conn,
-                 """
+                 ~S"""
                  SELECT id from users
                  -- WHERE id = {{user_id1}}
                  /* WHERE id = {{user_id2}} */ WHERE id = $1
@@ -290,7 +291,7 @@ defmodule KinoDB.SQLCellTest do
              result =
                MyXQL.query!(
                  conn,
-                 """
+                 ~S"""
                  SELECT id from users
                  -- WHERE id = {{user_id1}}
                  /* WHERE id = {{user_id2}} */ WHERE id = ?
@@ -303,7 +304,7 @@ defmodule KinoDB.SQLCellTest do
              result =
                Exqlite.query!(
                  conn,
-                 """
+                 ~S"""
                  SELECT id from users
                  -- WHERE id = {{user_id1}}
                  /* WHERE id = {{user_id2}} */ WHERE id = ?1
@@ -316,7 +317,7 @@ defmodule KinoDB.SQLCellTest do
              result =
                Req.post!(conn,
                  bigquery:
-                   {"""
+                   {~S"""
                     SELECT id from users
                     -- WHERE id = {{user_id1}}
                     /* WHERE id = {{user_id2}} */ WHERE id = ?
@@ -328,7 +329,7 @@ defmodule KinoDB.SQLCellTest do
              result =
                Req.post!(conn,
                  athena:
-                   {"""
+                   {~S"""
                     SELECT id from users
                     -- WHERE id = {{user_id1}}
                     /* WHERE id = {{user_id2}} */ WHERE id = ?
@@ -340,7 +341,7 @@ defmodule KinoDB.SQLCellTest do
              result =
                Explorer.DataFrame.from_query!(
                  conn,
-                 """
+                 ~S"""
                  SELECT id from users
                  -- WHERE id = {{user_id1}}
                  /* WHERE id = {{user_id2}} */ WHERE id = ?1
@@ -353,7 +354,7 @@ defmodule KinoDB.SQLCellTest do
              result =
                Tds.query!(
                  conn,
-                 """
+                 ~S"""
                  SELECT id from users
                  -- WHERE id = {{user_id1}}
                  /* WHERE id = {{user_id2}} */ WHERE id = @1
@@ -373,31 +374,31 @@ defmodule KinoDB.SQLCellTest do
       }
 
       assert SQLCell.to_source(attrs) == """
-             result = Postgrex.query!(conn, "SELECT id FROM users", [], timeout: 30000)\
+             result = Postgrex.query!(conn, ~S"SELECT id FROM users", [], timeout: 30000)\
              """
 
       assert SQLCell.to_source(put_in(attrs["connection"]["type"], "mysql")) == """
-             result = MyXQL.query!(conn, "SELECT id FROM users", [], timeout: 30000)\
+             result = MyXQL.query!(conn, ~S"SELECT id FROM users", [], timeout: 30000)\
              """
 
       assert SQLCell.to_source(put_in(attrs["connection"]["type"], "sqlite")) == """
-             result = Exqlite.query!(conn, "SELECT id FROM users", [], timeout: 30000)\
+             result = Exqlite.query!(conn, ~S"SELECT id FROM users", [], timeout: 30000)\
              """
 
       assert SQLCell.to_source(put_in(attrs["connection"]["type"], "bigquery")) == """
-             result = Req.post!(conn, bigquery: {"SELECT id FROM users", []}).body\
+             result = Req.post!(conn, bigquery: {~S"SELECT id FROM users", []}).body\
              """
 
       assert SQLCell.to_source(put_in(attrs["connection"]["type"], "athena")) == """
-             result = Req.post!(conn, athena: {"SELECT id FROM users", []}).body\
+             result = Req.post!(conn, athena: {~S"SELECT id FROM users", []}).body\
              """
 
       assert SQLCell.to_source(put_in(attrs["connection"]["type"], "snowflake")) == """
-             result = Explorer.DataFrame.from_query!(conn, "SELECT id FROM users", [])\
+             result = Explorer.DataFrame.from_query!(conn, ~S"SELECT id FROM users", [])\
              """
 
       assert SQLCell.to_source(put_in(attrs["connection"]["type"], "sqlserver")) == """
-             result = Tds.query!(conn, "SELECT id FROM users", [], timeout: 30000)\
+             result = Tds.query!(conn, ~S"SELECT id FROM users", [], timeout: 30000)\
              """
     end
 
@@ -411,38 +412,67 @@ defmodule KinoDB.SQLCellTest do
       }
 
       assert SQLCell.to_source(attrs) == """
-             result = Postgrex.query!(conn, "SELECT id FROM users", [])\
+             result = Postgrex.query!(conn, ~S"SELECT id FROM users", [])\
              """
 
       assert SQLCell.to_source(put_in(attrs["connection"]["type"], "mysql")) == """
-             result = MyXQL.query!(conn, "SELECT id FROM users", [])\
+             result = MyXQL.query!(conn, ~S"SELECT id FROM users", [])\
              """
 
       assert SQLCell.to_source(put_in(attrs["connection"]["type"], "sqlite")) == """
-             result = Exqlite.query!(conn, "SELECT id FROM users", [])\
+             result = Exqlite.query!(conn, ~S"SELECT id FROM users", [])\
              """
 
       assert SQLCell.to_source(put_in(attrs["connection"]["type"], "snowflake")) == """
-             result = DF.from_query!(conn, "SELECT id FROM users", [])\
+             result = DF.from_query!(conn, ~S"SELECT id FROM users", [])\
              """
 
       assert SQLCell.to_source(put_in(attrs["connection"]["type"], "bigquery")) == """
-             result = Req.post!(conn, bigquery: {"SELECT id FROM users", []}).body\
+             result = Req.post!(conn, bigquery: {~S"SELECT id FROM users", []}).body\
              """
 
       athena = put_in(attrs["connection"]["type"], "athena")
 
       assert SQLCell.to_source(put_in(athena["cache_query"], true)) == """
-             result = Req.post!(conn, athena: {"SELECT id FROM users", []}, cache_query: true).body\
+             result = Req.post!(conn, athena: {~S"SELECT id FROM users", []}, cache_query: true).body\
              """
 
       assert SQLCell.to_source(put_in(athena["cache_query"], false)) == """
-             result = Req.post!(conn, athena: {"SELECT id FROM users", []}, cache_query: false).body\
+             result = Req.post!(conn, athena: {~S"SELECT id FROM users", []}, cache_query: false).body\
              """
 
       assert SQLCell.to_source(put_in(attrs["connection"]["type"], "sqlserver")) == """
-             result = Tds.query!(conn, "SELECT id FROM users", [])\
+             result = Tds.query!(conn, ~S"SELECT id FROM users", [])\
              """
+    end
+
+    test "escapes interpolation" do
+      attrs = %{
+        "connection" => %{"variable" => "conn", "type" => "postgres"},
+        "result_variable" => "result",
+        "timeout" => nil,
+        "query" => "SELECT id FROM users WHERE last_name = '\#{user_id}'",
+        "data_frame_alias" => Explorer.DataFrame
+      }
+
+      assert SQLCell.to_source(attrs) == """
+             result =
+               Postgrex.query!(conn, ~S"SELECT id FROM users WHERE last_name = '\#{user_id}'", [])\
+             """
+
+      athena = put_in(attrs["query"], "SELECT id FROM users\nWHERE last_name = '\#{user_id}'")
+
+      assert SQLCell.to_source(put_in(athena["cache_query"], true)) == ~s'''
+             result =
+               Postgrex.query!(
+                 conn,
+                 ~S"""
+                 SELECT id FROM users
+                 WHERE last_name = '\#{user_id}'
+                 """,
+                 []
+               )\
+             '''
     end
   end
 end
