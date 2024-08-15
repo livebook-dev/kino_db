@@ -37,16 +37,7 @@ defmodule KinoDB.SQLCellTest do
   test "finds database connections in binding and sends them to the client" do
     {kino, _source} = start_smart_cell!(SQLCell, %{})
 
-    parent = self()
-
-    spawn_link(fn ->
-      # Pretend we are a connection pool for Postgrex
-      DBConnection.register_as_pool(Postgrex.Protocol)
-      send(parent, {:ready, self()})
-      assert_receive :stop
-    end)
-
-    assert_receive {:ready, conn_pid}
+    conn_pid = spawn_fake_postgrex_connection()
 
     binding = [non_conn: self(), conn: conn_pid]
     # TODO: Use Code.env_for_eval on Elixir v1.14+
@@ -59,8 +50,45 @@ defmodule KinoDB.SQLCellTest do
       "connections" => [^connection],
       "connection" => ^connection
     })
+  end
 
-    send(conn_pid, :stop)
+  test "keeps the currently selected connection if not available in binding" do
+    attrs = %{"connection" => %{"variable" => "conn1", "type" => "postgres"}}
+    {kino, _source} = start_smart_cell!(SQLCell, attrs)
+
+    conn_pid = spawn_fake_postgrex_connection()
+
+    binding = [conn: conn_pid]
+    # TODO: Use Code.env_for_eval on Elixir v1.14+
+    env = :elixir.env_for_eval([])
+    SQLCell.scan_binding(kino.pid, binding, env)
+
+    current_connection = %{variable: "conn1", type: "postgres"}
+    connection = %{variable: "conn", type: "postgres"}
+
+    assert_broadcast_event(kino, "connections", %{
+      "connections" => [^connection],
+      "connection" => ^current_connection
+    })
+  end
+
+  test "updates the selected connection type when the variable changes" do
+    attrs = %{"connection" => %{"variable" => "conn", "type" => "sqlite"}}
+    {kino, _source} = start_smart_cell!(SQLCell, attrs)
+
+    conn_pid = spawn_fake_postgrex_connection()
+
+    binding = [conn: conn_pid]
+    # TODO: Use Code.env_for_eval on Elixir v1.14+
+    env = :elixir.env_for_eval([])
+    SQLCell.scan_binding(kino.pid, binding, env)
+
+    connection = %{variable: "conn", type: "postgres"}
+
+    assert_broadcast_event(kino, "connections", %{
+      "connections" => [^connection],
+      "connection" => ^connection
+    })
   end
 
   describe "code generation" do
@@ -474,5 +502,23 @@ defmodule KinoDB.SQLCellTest do
                )\
              '''
     end
+  end
+
+  defp spawn_fake_postgrex_connection() do
+    parent = self()
+
+    conn =
+      spawn_link(fn ->
+        # Pretend we are a connection pool for Postgrex
+        DBConnection.register_as_pool(Postgrex.Protocol)
+        send(parent, {:ready, self()})
+        receive do: (:stop -> :ok)
+      end)
+
+    on_exit(fn ->
+      send(conn, :stop)
+    end)
+
+    receive do: ({:ready, ^conn} -> conn)
   end
 end
