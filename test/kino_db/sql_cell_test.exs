@@ -40,8 +40,7 @@ defmodule KinoDB.SQLCellTest do
     conn_pid = spawn_fake_postgrex_connection()
 
     binding = [non_conn: self(), conn: conn_pid]
-    # TODO: Use Code.env_for_eval on Elixir v1.14+
-    env = :elixir.env_for_eval([])
+    env = Code.env_for_eval([])
     SQLCell.scan_binding(kino.pid, binding, env)
 
     connection = %{variable: "conn", type: "postgres"}
@@ -59,8 +58,7 @@ defmodule KinoDB.SQLCellTest do
     conn_pid = spawn_fake_postgrex_connection()
 
     binding = [conn: conn_pid]
-    # TODO: Use Code.env_for_eval on Elixir v1.14+
-    env = :elixir.env_for_eval([])
+    env = Code.env_for_eval([])
     SQLCell.scan_binding(kino.pid, binding, env)
 
     current_connection = %{variable: "conn1", type: "postgres"}
@@ -79,8 +77,7 @@ defmodule KinoDB.SQLCellTest do
     conn_pid = spawn_fake_postgrex_connection()
 
     binding = [conn: conn_pid]
-    # TODO: Use Code.env_for_eval on Elixir v1.14+
-    env = :elixir.env_for_eval([])
+    env = Code.env_for_eval([])
     SQLCell.scan_binding(kino.pid, binding, env)
 
     connection = %{variable: "conn", type: "postgres"}

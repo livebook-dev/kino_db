@@ -10,7 +10,7 @@ defmodule KinoDB.MixProject do
       version: @version,
       description: @description,
       name: "KinoDB",
-      elixir: "~> 1.13",
+      elixir: "~> 1.14",
       start_permanent: Mix.env() == :prod,
       deps: deps(),
       docs: docs(),
