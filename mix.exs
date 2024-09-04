@@ -1,7 +1,7 @@
 defmodule KinoDB.MixProject do
   use Mix.Project
 
-  @version "0.2.10"
+  @version "0.2.11"
   @description "Databases integration with Livebook"
 
   def project do
@@ -26,7 +26,7 @@ defmodule KinoDB.MixProject do
 
   defp deps do
     [
-      {:kino, "~> 0.13.0"},
+      {:kino, "~> 0.13"},
       {:table, "~> 0.1"},
       {:adbc, "~> 0.2", optional: true},
       {:db_connection, "~> 2.4.2 or ~> 2.5", optional: true},
