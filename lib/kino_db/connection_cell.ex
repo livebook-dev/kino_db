@@ -466,15 +466,15 @@ defmodule KinoDB.ConnectionCell do
   end
 
   defp missing_dep(%{"type" => "athena"}) do
-    cond do
-      not Code.ensure_loaded?(ReqAthena) ->
-        ~s|{:req_athena, "~> 0.1"}|
-
-      not Code.ensure_loaded?(Explorer) ->
-        ~s|{:explorer, "~> 0.9"}|
-
-      true ->
-        nil
+    deps = [
+      {ReqAthena, ~s|{:req_athena, "~> 0.1"}|},
+      {Explorer, ~s|{:explorer, "~> 0.9"}|}
+    ]
+    
+    deps = for {module, dep} <- deps, not Code.ensure_loaded?(module), do: dep
+    
+    if deps != [] do
+      Enum.join(deps, ", ")
     end
   end
 
