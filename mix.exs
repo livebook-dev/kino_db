@@ -38,7 +38,7 @@ defmodule KinoDB.MixProject do
       # Those dependecies are new, so we use stricter versions
       {:explorer, "~> 0.8.0 or ~> 0.9.0", optional: true},
       {:req_bigquery, "~> 0.1.0", optional: true},
-      {:req_athena, "~> 0.1.1", optional: true},
+      {:req_athena, "~> 0.2.0", optional: true},
 
       # Dev only
       {:ex_doc, "~> 0.28", only: :dev, runtime: false}
