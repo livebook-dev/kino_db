@@ -470,9 +470,9 @@ defmodule KinoDB.ConnectionCell do
       {ReqAthena, ~s|{:req_athena, "~> 0.1"}|},
       {Explorer, ~s|{:explorer, "~> 0.9"}|}
     ]
-    
+
     deps = for {module, dep} <- deps, not Code.ensure_loaded?(module), do: dep
-    
+
     if deps != [] do
       Enum.join(deps, ", ")
     end
