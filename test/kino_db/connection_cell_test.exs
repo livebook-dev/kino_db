@@ -165,6 +165,7 @@ defmodule KinoDB.ConnectionCellTest do
              db =
                Req.new(http_errors: :raise)
                |> ReqAthena.attach(
+                 format: :explorer,
                  access_key_id: "id",
                  database: "default",
                  output_location: "s3://my-bucket",
@@ -185,6 +186,7 @@ defmodule KinoDB.ConnectionCellTest do
              db =
                Req.new(http_errors: :raise)
                |> ReqAthena.attach(
+                 format: :explorer,
                  access_key_id: "id",
                  database: "default",
                  output_location: "s3://my-bucket",
@@ -329,6 +331,7 @@ defmodule KinoDB.ConnectionCellTest do
       conn =
         Req.new(http_errors: :raise)
         |> ReqAthena.attach(
+          format: :explorer,
           access_key_id: "id",
           database: "default",
           output_location: "s3://my-bucket",

@@ -302,6 +302,7 @@ defmodule KinoDB.ConnectionCell do
       unquote(quoted_var(attrs["variable"])) =
         Req.new(http_errors: :raise)
         |> ReqAthena.attach(
+          format: :explorer,
           access_key_id: unquote(attrs["access_key_id"]),
           database: unquote(attrs["database"]),
           output_location: unquote(attrs["output_location"]),
@@ -465,8 +466,15 @@ defmodule KinoDB.ConnectionCell do
   end
 
   defp missing_dep(%{"type" => "athena"}) do
-    unless Code.ensure_loaded?(ReqAthena) do
-      ~s|{:req_athena, "~> 0.1"}|
+    deps = [
+      {ReqAthena, ~s|{:req_athena, "~> 0.1"}|},
+      {Explorer, ~s|{:explorer, "~> 0.9"}|}
+    ]
+    
+    deps = for {module, dep} <- deps, not Code.ensure_loaded?(module), do: dep
+    
+    if deps != [] do
+      Enum.join(deps, ", ")
     end
   end
 
