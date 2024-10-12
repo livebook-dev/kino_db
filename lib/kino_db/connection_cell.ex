@@ -217,6 +217,13 @@ defmodule KinoDB.ConnectionCell do
     Enum.any?(keys, fn key -> attrs[key] not in [nil, ""] end)
   end
 
+  defp trim_opts(opts) do
+    Enum.map(opts, fn
+      {key, value} when is_binary(value) -> {key, String.trim(value)}
+      {key, value} -> {key, value}
+    end)
+  end
+
   defp to_quoted(%{"type" => "sqlite"} = attrs) do
     quote do
       opts = [database: unquote(attrs["database_path"])]
@@ -254,7 +261,7 @@ defmodule KinoDB.ConnectionCell do
 
   defp to_quoted(%{"type" => "postgres"} = attrs) do
     quote do
-      opts = unquote(shared_options(attrs) ++ postgres_and_mysql_options(attrs))
+      opts = unquote(trim_opts(shared_options(attrs) ++ postgres_and_mysql_options(attrs)))
 
       {:ok, unquote(quoted_var(attrs["variable"]))} = Kino.start_child({Postgrex, opts})
     end
@@ -262,7 +269,7 @@ defmodule KinoDB.ConnectionCell do
 
   defp to_quoted(%{"type" => "mysql"} = attrs) do
     quote do
-      opts = unquote(shared_options(attrs) ++ postgres_and_mysql_options(attrs))
+      opts = unquote(trim_opts(shared_options(attrs) ++ postgres_and_mysql_options(attrs)))
 
       {:ok, unquote(quoted_var(attrs["variable"]))} = Kino.start_child({MyXQL, opts})
     end
@@ -270,7 +277,7 @@ defmodule KinoDB.ConnectionCell do
 
   defp to_quoted(%{"type" => "sqlserver"} = attrs) do
     quote do
-      opts = unquote(shared_options(attrs) ++ sqlserver_options(attrs))
+      opts = unquote(trim_opts(shared_options(attrs) ++ sqlserver_options(attrs)))
 
       {:ok, unquote(quoted_var(attrs["variable"]))} = Kino.start_child({Tds, opts})
     end
