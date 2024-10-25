@@ -122,6 +122,10 @@ defmodule KinoDB.SQLCellTest do
              result = Explorer.DataFrame.from_query!(conn, ~S"SELECT id FROM users", [])\
              """
 
+      assert SQLCell.to_source(put_in(attrs["connection"]["type"], "clickhouse")) == """
+             result = Ch.query!(conn, ~S"SELECT id FROM users", [])\
+             """
+
       assert SQLCell.to_source(put_in(attrs["connection"]["type"], "sqlserver")) == """
              result = Tds.query!(conn, ~S"SELECT id FROM users", [])\
              """
@@ -206,6 +210,18 @@ defmodule KinoDB.SQLCellTest do
                )\
              '''
 
+      assert SQLCell.to_source(put_in(attrs["connection"]["type"], "clickhouse")) == ~s'''
+             result =
+               Ch.query!(
+                 conn,
+                 ~S"""
+                 SELECT id FROM users
+                 WHERE last_name = 'Sherlock'
+                 """,
+                 []
+               )\
+             '''
+
       assert SQLCell.to_source(put_in(attrs["connection"]["type"], "sqlserver")) == ~s'''
              result =
                Tds.query!(
@@ -273,6 +289,15 @@ defmodule KinoDB.SQLCellTest do
                Explorer.DataFrame.from_query!(
                  conn,
                  ~S"SELECT id FROM users WHERE id ?1 AND name LIKE ?2",
+                 [user_id, search <> \"%\"]
+               )\
+             '''
+
+      assert SQLCell.to_source(put_in(attrs["connection"]["type"], "clickhouse")) == ~s'''
+             result =
+               Ch.query!(
+                 conn,
+                 ~S"SELECT id FROM users WHERE id {$1:String} AND name LIKE {$2:String}",
                  [user_id, search <> \"%\"]
                )\
              '''
@@ -375,6 +400,19 @@ defmodule KinoDB.SQLCellTest do
                )\
              '''
 
+      assert SQLCell.to_source(put_in(attrs["connection"]["type"], "clickhouse")) == ~s'''
+             result =
+               Ch.query!(
+                 conn,
+                 ~S"""
+                 SELECT id from users
+                 -- WHERE id = {{user_id1}}
+                 /* WHERE id = {{user_id2}} */ WHERE id = {$1:String}
+                 """,
+                 [user_id3]
+               )\
+             '''
+
       assert SQLCell.to_source(put_in(attrs["connection"]["type"], "sqlserver")) == ~s'''
              result =
                Tds.query!(
@@ -422,6 +460,10 @@ defmodule KinoDB.SQLCellTest do
              result = Explorer.DataFrame.from_query!(conn, ~S"SELECT id FROM users", [])\
              """
 
+      assert SQLCell.to_source(put_in(attrs["connection"]["type"], "clickhouse")) == """
+             result = Ch.query!(conn, ~S"SELECT id FROM users", [])\
+             """
+
       assert SQLCell.to_source(put_in(attrs["connection"]["type"], "sqlserver")) == """
              result = Tds.query!(conn, ~S"SELECT id FROM users", [], timeout: 30000)\
              """
@@ -450,6 +492,10 @@ defmodule KinoDB.SQLCellTest do
 
       assert SQLCell.to_source(put_in(attrs["connection"]["type"], "snowflake")) == """
              result = DF.from_query!(conn, ~S"SELECT id FROM users", [])\
+             """
+
+      assert SQLCell.to_source(put_in(attrs["connection"]["type"], "clickhouse")) == """
+             result = Ch.query!(conn, ~S"SELECT id FROM users", [])\
              """
 
       assert SQLCell.to_source(put_in(attrs["connection"]["type"], "bigquery")) == """

@@ -439,11 +439,7 @@ defmodule KinoDB.ConnectionCell do
 
   defp clickhouse_options(attrs) do
     [
-      scheme: attrs["scheme"],
-      hostname: attrs["hostname"],
-      port: attrs["port"],
-      database: attrs["database"],
-      password: attrs["password_secret"]
+      scheme: attrs["scheme"] || "http"
     ]
   end
 

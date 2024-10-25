@@ -207,6 +207,19 @@ defmodule KinoDB.ConnectionCellTest do
              {:ok, db} = Kino.start_child({Adbc.Database, driver: :snowflake, uri: uri})
              {:ok, conn} = Kino.start_child({Adbc.Connection, database: db})\
              '''
+
+      assert ConnectionCell.to_source(put_in(attrs["type"], "clickhouse")) == ~s'''
+             opts = [
+               hostname: "localhost",
+               port: 4444,
+               username: "admin",
+               password: "pass",
+               database: "default",
+               scheme: "http"
+             ]
+
+             {:ok, conn} = Kino.start_child({Ch, opts})\
+             '''
     end
 
     test "generates empty source code when required fields are missing" do
@@ -216,6 +229,7 @@ defmodule KinoDB.ConnectionCellTest do
       assert ConnectionCell.to_source(put_in(@empty_required_fields["type"], "bigquery")) == ""
       assert ConnectionCell.to_source(put_in(@empty_required_fields["type"], "athena")) == ""
       assert ConnectionCell.to_source(put_in(@empty_required_fields["type"], "snowflake")) == ""
+      assert ConnectionCell.to_source(put_in(@empty_required_fields["type"], "clickhouse")) == ""
     end
 
     test "generates empty source code when all conditional fields are missing" do
