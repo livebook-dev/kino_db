@@ -219,6 +219,10 @@ defmodule KinoDB.SQLCell do
     to_quoted(attrs, quote(do: Tds), fn n -> "@#{n}" end)
   end
 
+  defp to_quoted(%{"connection" => %{"type" => "clickhouse"}} = attrs) do
+    to_quoted(attrs, quote(do: Ch), fn n -> "{$#{n}:String}" end)
+  end
+
   # Explorer-based
   defp to_quoted(%{"connection" => %{"type" => "snowflake"}} = attrs) do
     to_explorer_quoted(attrs, fn n -> "?#{n}" end)

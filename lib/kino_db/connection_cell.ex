@@ -149,6 +149,9 @@ defmodule KinoDB.ConnectionCell do
             else:
               ~w|database hostname port use_ipv6 username password use_ssl cacertfile instance|
 
+        "clickhouse" ->
+          ~w|scheme username password_secret hostname port database|
+
         type when type in ["postgres", "mysql"] ->
           if fields["use_password_secret"],
             do: ~w|database hostname port use_ipv6 use_ssl cacertfile username password_secret|,
@@ -187,6 +190,9 @@ defmodule KinoDB.ConnectionCell do
           )
 
         "sqlserver" ->
+          ~w|hostname port|
+
+        "clickhouse" ->
           ~w|hostname port|
 
         type when type in ["postgres", "mysql"] ->
@@ -323,6 +329,14 @@ defmodule KinoDB.ConnectionCell do
     end
   end
 
+  defp to_quoted(%{"type" => "clickhouse"} = attrs) do
+    quote do
+      opts = unquote(trim_opts(shared_options(attrs) ++ clickhouse_options(attrs)))
+
+      {:ok, unquote(quoted_var(attrs["variable"]))} = Kino.start_child({Ch, opts})
+    end
+  end
+
   defp quoted_access_key(%{"secret_access_key" => password}), do: password
 
   defp quoted_access_key(%{"secret_access_key_secret" => ""}), do: ""
@@ -423,6 +437,12 @@ defmodule KinoDB.ConnectionCell do
     end
   end
 
+  defp clickhouse_options(attrs) do
+    [
+      scheme: attrs["scheme"] || "http"
+    ]
+  end
+
   defp quoted_var(string), do: {String.to_atom(string), [], nil}
 
   defp quoted_pass(%{"password" => password}), do: password
@@ -494,6 +514,12 @@ defmodule KinoDB.ConnectionCell do
   defp missing_dep(%{"type" => "sqlserver"}) do
     unless Code.ensure_loaded?(Tds) do
       ~s|{:tds, "~> 2.3"}|
+    end
+  end
+
+  defp missing_dep(%{"type" => "clickhouse"}) do
+    unless Code.ensure_loaded?(Ch) do
+      ~s|{:ch, "~> 0.2"}|
     end
   end
 
