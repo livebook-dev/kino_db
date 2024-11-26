@@ -171,6 +171,7 @@ defmodule KinoDB.SQLCell do
     end
   end
 
+  defp connection_type({:clickhouse, _}), do: "clickhouse"
   defp connection_type(_connection), do: nil
 
   defp connection_type_from_adbc(connection) when is_pid(connection) do
@@ -219,10 +220,6 @@ defmodule KinoDB.SQLCell do
     to_quoted(attrs, quote(do: Tds), fn n -> "@#{n}" end)
   end
 
-  defp to_quoted(%{"connection" => %{"type" => "clickhouse"}} = attrs) do
-    to_quoted(attrs, quote(do: Ch), fn n -> "{$#{n}:String}" end)
-  end
-
   # Explorer-based
   defp to_quoted(%{"connection" => %{"type" => "snowflake"}} = attrs) do
     to_explorer_quoted(attrs, fn n -> "?#{n}" end)
@@ -239,6 +236,28 @@ defmodule KinoDB.SQLCell do
 
   defp to_quoted(%{"connection" => %{"type" => "athena"}} = attrs) do
     to_req_quoted(attrs, fn _n -> "?" end, :athena)
+  end
+
+  # ClichHouse
+  defp to_quoted(%{"connection" => %{"type" => "clickhouse"}} = attrs) do
+    {query, params} =
+      parameterize(attrs["query"], attrs["connection"]["type"], fn _n, ident ->
+        "{#{ident}:String}"
+      end)
+
+    dbg(query)
+    dbg(params)
+
+    quote do
+      {:clickhouse, req_ch_opts} = unquote(quoted_var(attrs["connection"]["variable"]))
+
+      unquote(quoted_var(attrs["result_variable"])) =
+        ReqCH.query!(
+          unquote(query),
+          unquote(params),
+          req_ch_opts
+        ).body
+    end
   end
 
   defp to_quoted(_ctx) do
@@ -342,7 +361,7 @@ defmodule KinoDB.SQLCell do
 
   defp parameterize("{{" <> rest = query, raw, params, n, type, next) do
     with [inner, rest] <- String.split(rest, "}}", parts: 2),
-         sql_param <- next.(n),
+         sql_param <- apply_next(next, n, inner),
          {:ok, param} <- quote_param(type, inner, sql_param) do
       parameterize(rest, raw <> sql_param, [param | params], n + 1, type, next)
     else
@@ -352,6 +371,18 @@ defmodule KinoDB.SQLCell do
 
   defp parameterize(<<char::utf8, rest::binary>>, raw, params, n, type, next) do
     parameterize(rest, <<raw::binary, char::utf8>>, params, n, type, next)
+  end
+
+  defp apply_next(next, n, _inner) when is_function(next, 1), do: next.(n)
+  defp apply_next(next, n, inner) when is_function(next, 2), do: next.(n, inner)
+
+  defp quote_param("clickhouse", inner, _sql_param) do
+    with {:ok, inner_ast} <- Code.string_to_quoted(inner) do
+      {:ok,
+       quote do
+         {unquote(inner), unquote(inner_ast)}
+       end}
+    end
   end
 
   defp quote_param("sqlserver", inner, sql_param) do

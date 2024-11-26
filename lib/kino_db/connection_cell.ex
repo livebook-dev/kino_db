@@ -150,7 +150,9 @@ defmodule KinoDB.ConnectionCell do
               ~w|database hostname port use_ipv6 username password use_ssl cacertfile instance|
 
         "clickhouse" ->
-          ~w|scheme username password_secret hostname port database|
+          if fields["use_password_secret"],
+            do: ~w|base_url username password_secret database|,
+            else: ~w|base_url username password database|
 
         type when type in ["postgres", "mysql"] ->
           if fields["use_password_secret"],
@@ -193,7 +195,7 @@ defmodule KinoDB.ConnectionCell do
           ~w|hostname port|
 
         "clickhouse" ->
-          ~w|hostname port|
+          ~w|base_url|
 
         type when type in ["postgres", "mysql"] ->
           ~w|hostname port|
@@ -330,10 +332,17 @@ defmodule KinoDB.ConnectionCell do
   end
 
   defp to_quoted(%{"type" => "clickhouse"} = attrs) do
-    quote do
-      opts = unquote(trim_opts(shared_options(attrs) ++ clickhouse_options(attrs)))
+    trimmed = attrs |> trim_opts() |> Map.new()
+    shared_opts = shared_options(trimmed)
 
-      {:ok, unquote(quoted_var(attrs["variable"]))} = Kino.start_child({Ch, opts})
+    clickhouse_opts = trimmed |> clickhouse_options(shared_opts)
+
+    quote do
+      opts = unquote(clickhouse_opts)
+
+      unquote(quoted_var(attrs["variable"])) = {:clickhouse, opts}
+
+      :ok
     end
   end
 
@@ -439,8 +448,48 @@ defmodule KinoDB.ConnectionCell do
 
   defp clickhouse_options(attrs) do
     [
-      scheme: attrs["scheme"] || "http"
+      base_url: attrs["base_url"] || "http://localhost:8123"
     ]
+  end
+
+  defp clickhouse_options(attrs, shared_options) do
+    attrs
+    |> clickhouse_options()
+    |> maybe_add_req_basic_auth(shared_options)
+    |> maybe_add_clickhouse_database(shared_options)
+  end
+
+  defp maybe_add_req_basic_auth(opts, shared_opts) do
+    username = shared_opts[:username]
+
+    if username != "" do
+      password = shared_opts[:password]
+
+      auth =
+        if is_binary(password) do
+          "#{username}:#{password}"
+        else
+          quote do
+            unquote(username) <> ":" <> unquote(password)
+          end
+        end
+
+      Keyword.put_new(
+        opts,
+        :auth,
+        {:basic, auth}
+      )
+    else
+      opts
+    end
+  end
+
+  defp maybe_add_clickhouse_database(opts, shared_opts) do
+    if shared_opts[:database] != "" do
+      Keyword.put_new(opts, :database, shared_opts[:database])
+    else
+      opts
+    end
   end
 
   defp quoted_var(string), do: {String.to_atom(string), [], nil}
@@ -462,6 +511,7 @@ defmodule KinoDB.ConnectionCell do
       Code.ensure_loaded?(Exqlite) -> "sqlite"
       Code.ensure_loaded?(ReqBigQuery) -> "bigquery"
       Code.ensure_loaded?(ReqAthena) -> "athena"
+      Code.ensure_loaded?(ReqCH) -> "clickhouse"
       Code.ensure_loaded?(Adbc) -> "duckdb"
       Code.ensure_loaded?(Tds) -> "sqlserver"
       true -> "postgres"
@@ -518,8 +568,15 @@ defmodule KinoDB.ConnectionCell do
   end
 
   defp missing_dep(%{"type" => "clickhouse"}) do
-    unless Code.ensure_loaded?(Ch) do
-      ~s|{:ch, "~> 0.2"}|
+    deps = [
+      {ReqCH, ~s|{:req_ch, git: "https://github.com/livebook-dev/req_ch.git"}|},
+      {Explorer, ~s|{:explorer, "~> 0.10"}|}
+    ]
+
+    deps = for {module, dep} <- deps, not Code.ensure_loaded?(module), do: dep
+
+    if deps != [] do
+      Enum.join(deps, ", ")
     end
   end
 
