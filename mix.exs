@@ -40,7 +40,7 @@ defmodule KinoDB.MixProject do
       {:req_bigquery, "~> 0.1.0", optional: true},
       {:req_athena, "~> 0.2.0", optional: true},
       {:req_ch,
-       git: "https://github.com/livebook-dev/req_ch.git", branch: "ps-add-query-4", optional: true},
+       git: "https://github.com/livebook-dev/req_ch.git", branch: "main", optional: true},
 
       # Dev only
       {:ex_doc, "~> 0.28", only: :dev, runtime: false}
