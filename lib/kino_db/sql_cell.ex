@@ -223,7 +223,6 @@ defmodule KinoDB.SQLCell do
   # query!/4 based that returns a Req response.
   defp to_quoted(%{"connection" => %{"type" => "clickhouse"}} = attrs) do
     to_quoted_query_req(attrs, quote(do: ReqCH), fn n, inner ->
-      # TODO: we may need to better specify the type here.
       name =
         if String.match?(inner, ~r/[^a-z0-9_]/) do
           "param_#{n}"
