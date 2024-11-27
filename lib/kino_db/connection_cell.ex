@@ -151,8 +151,8 @@ defmodule KinoDB.ConnectionCell do
 
         "clickhouse" ->
           if fields["use_password_secret"],
-            do: ~w|base_url username password_secret database|,
-            else: ~w|base_url username password database|
+            do: ~w|hostname port use_ssl username password_secret database|,
+            else: ~w|hostname port use_ssl username password database|
 
         type when type in ["postgres", "mysql"] ->
           if fields["use_password_secret"],
@@ -195,7 +195,7 @@ defmodule KinoDB.ConnectionCell do
           ~w|hostname port|
 
         "clickhouse" ->
-          ~w|base_url|
+          ~w|hostname port|
 
         type when type in ["postgres", "mysql"] ->
           ~w|hostname port|
@@ -338,9 +338,7 @@ defmodule KinoDB.ConnectionCell do
     clickhouse_opts = trimmed |> clickhouse_options(shared_opts)
 
     quote do
-      opts = unquote(clickhouse_opts)
-
-      unquote(quoted_var(attrs["variable"])) = {:clickhouse, opts}
+      unquote(quoted_var(attrs["variable"])) = ReqCH.new(unquote(clickhouse_opts))
 
       :ok
     end
@@ -447,16 +445,29 @@ defmodule KinoDB.ConnectionCell do
   end
 
   defp clickhouse_options(attrs) do
-    [
-      base_url: attrs["base_url"] || "http://localhost:8123"
-    ]
+    scheme = if attrs["use_ssl"], do: "https", else: "http"
+
+    [scheme: scheme]
   end
 
   defp clickhouse_options(attrs, shared_options) do
     attrs
     |> clickhouse_options()
+    |> build_clickhouse_base_url(shared_options)
     |> maybe_add_req_basic_auth(shared_options)
     |> maybe_add_clickhouse_database(shared_options)
+  end
+
+  defp build_clickhouse_base_url(opts, shared_opts) do
+    host = Keyword.fetch!(shared_opts, :hostname)
+    port = Keyword.fetch!(shared_opts, :port)
+    scheme = Keyword.fetch!(opts, :scheme)
+
+    uri = %URI{scheme: scheme, port: port, host: host}
+
+    opts
+    |> Keyword.put_new(:base_url, URI.to_string(uri))
+    |> Keyword.delete(:scheme)
   end
 
   defp maybe_add_req_basic_auth(opts, shared_opts) do
@@ -543,16 +554,10 @@ defmodule KinoDB.ConnectionCell do
   end
 
   defp missing_dep(%{"type" => "athena"}) do
-    deps = [
+    missing_many_deps([
       {ReqAthena, ~s|{:req_athena, "~> 0.1"}|},
       {Explorer, ~s|{:explorer, "~> 0.9"}|}
-    ]
-
-    deps = for {module, dep} <- deps, not Code.ensure_loaded?(module), do: dep
-
-    if deps != [] do
-      Enum.join(deps, ", ")
-    end
+    ])
   end
 
   defp missing_dep(%{"type" => adbc}) when adbc in ~w[snowflake duckdb] do
@@ -568,19 +573,21 @@ defmodule KinoDB.ConnectionCell do
   end
 
   defp missing_dep(%{"type" => "clickhouse"}) do
-    deps = [
+    missing_many_deps([
       {ReqCH, ~s|{:req_ch, git: "https://github.com/livebook-dev/req_ch.git"}|},
       {Explorer, ~s|{:explorer, "~> 0.10"}|}
-    ]
+    ])
+  end
 
+  defp missing_dep(_ctx), do: nil
+
+  defp missing_many_deps(deps) do
     deps = for {module, dep} <- deps, not Code.ensure_loaded?(module), do: dep
 
     if deps != [] do
       Enum.join(deps, ", ")
     end
   end
-
-  defp missing_dep(_ctx), do: nil
 
   defp join_quoted(quoted_blocks) do
     asts =

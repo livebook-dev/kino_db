@@ -167,11 +167,11 @@ defmodule KinoDB.SQLCell do
     cond do
       Keyword.has_key?(connection.request_steps, :bigquery_run) -> "bigquery"
       Keyword.has_key?(connection.request_steps, :athena_run) -> "athena"
+      Keyword.has_key?(connection.request_steps, :clickhouse_run) -> "clickhouse"
       true -> nil
     end
   end
 
-  defp connection_type({:clickhouse, _}), do: "clickhouse"
   defp connection_type(_connection), do: nil
 
   defp connection_type_from_adbc(connection) when is_pid(connection) do
@@ -220,6 +220,21 @@ defmodule KinoDB.SQLCell do
     to_quoted(attrs, quote(do: Tds), fn n -> "@#{n}" end)
   end
 
+  # query!/4 based that returns a Req response.
+  defp to_quoted(%{"connection" => %{"type" => "clickhouse"}} = attrs) do
+    to_quoted_query_req(attrs, quote(do: ReqCH), fn n, inner ->
+      # TODO: we may need to better specify the type here.
+      name =
+        if String.match?(inner, ~r/[^a-z0-9_]/) do
+          "param_#{n}"
+        else
+          inner
+        end
+
+      "{#{name}:String}"
+    end)
+  end
+
   # Explorer-based
   defp to_quoted(%{"connection" => %{"type" => "snowflake"}} = attrs) do
     to_explorer_quoted(attrs, fn n -> "?#{n}" end)
@@ -238,30 +253,23 @@ defmodule KinoDB.SQLCell do
     to_req_quoted(attrs, fn _n -> "?" end, :athena)
   end
 
-  # ClichHouse
-  defp to_quoted(%{"connection" => %{"type" => "clickhouse"}} = attrs) do
-    {query, params} =
-      parameterize(attrs["query"], attrs["connection"]["type"], fn _n, ident ->
-        "{#{ident}:String}"
-      end)
-
-    dbg(query)
-    dbg(params)
-
+  defp to_quoted(_ctx) do
     quote do
-      {:clickhouse, req_ch_opts} = unquote(quoted_var(attrs["connection"]["variable"]))
-
-      unquote(quoted_var(attrs["result_variable"])) =
-        ReqCH.query!(
-          unquote(query),
-          unquote(params),
-          req_ch_opts
-        ).body
     end
   end
 
-  defp to_quoted(_ctx) do
+  defp to_quoted_query_req(attrs, quoted_module, next) do
+    {query, params} = parameterize(attrs["query"], attrs["connection"]["type"], next)
+    opts_args = query_opts_args(attrs)
+
     quote do
+      unquote(quoted_var(attrs["result_variable"])) =
+        unquote(quoted_module).query!(
+          unquote(quoted_var(attrs["connection"]["variable"])),
+          unquote(quoted_query(query)),
+          unquote(params),
+          unquote_splicing(opts_args)
+        ).body
     end
   end
 
@@ -329,6 +337,9 @@ defmodule KinoDB.SQLCell do
   defp query_opts_args(%{"connection" => %{"type" => "athena"}, "cache_query" => cache_query}),
     do: [[cache_query: cache_query]]
 
+  defp query_opts_args(%{"connection" => %{"type" => "clickhouse"}}),
+    do: [[format: :explorer]]
+
   defp query_opts_args(_attrs), do: []
 
   defp parameterize(query, type, next) do
@@ -376,11 +387,14 @@ defmodule KinoDB.SQLCell do
   defp apply_next(next, n, _inner) when is_function(next, 1), do: next.(n)
   defp apply_next(next, n, inner) when is_function(next, 2), do: next.(n, inner)
 
-  defp quote_param("clickhouse", inner, _sql_param) do
+  defp quote_param("clickhouse", inner, sql_param) do
     with {:ok, inner_ast} <- Code.string_to_quoted(inner) do
+      name =
+        sql_param |> String.trim_leading("{") |> String.split(":", parts: 2) |> List.first()
+
       {:ok,
        quote do
-         {unquote(inner), unquote(inner_ast)}
+         {unquote(name), unquote(inner_ast)}
        end}
     end
   end
