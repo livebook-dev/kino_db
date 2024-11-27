@@ -485,11 +485,7 @@ defmodule KinoDB.ConnectionCell do
           end
         end
 
-      Keyword.put_new(
-        opts,
-        :auth,
-        {:basic, auth}
-      )
+      Keyword.put_new(opts, :auth, {:basic, auth})
     else
       opts
     end
