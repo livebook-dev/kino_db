@@ -39,8 +39,7 @@ defmodule KinoDB.MixProject do
       # Those dependecies are new, so we use stricter versions
       {:req_bigquery, "~> 0.1.0", optional: true},
       {:req_athena, "~> 0.2.0", optional: true},
-      {:req_ch,
-       git: "https://github.com/livebook-dev/req_ch.git", branch: "main", optional: true},
+      {:req_ch, "~> 0.1.0", optional: true},
 
       # Dev only
       {:ex_doc, "~> 0.28", only: :dev, runtime: false}
