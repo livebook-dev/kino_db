@@ -34,11 +34,12 @@ defmodule KinoDB.MixProject do
       {:myxql, "~> 0.7", optional: true},
       {:postgrex, "~> 0.18 or ~> 1.0", optional: true},
       {:tds, "~> 2.3.4 or ~> 2.4", optional: true},
-      {:explorer, "~> 0.8", optional: true},
+      {:explorer, "~> 0.10", optional: true},
 
       # Those dependecies are new, so we use stricter versions
       {:req_bigquery, "~> 0.1.0", optional: true},
       {:req_athena, "~> 0.2.0", optional: true},
+      {:req_ch, "~> 0.1.0", optional: true},
 
       # Dev only
       {:ex_doc, "~> 0.28", only: :dev, runtime: false}

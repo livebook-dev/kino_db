@@ -167,6 +167,7 @@ defmodule KinoDB.SQLCell do
     cond do
       Keyword.has_key?(connection.request_steps, :bigquery_run) -> "bigquery"
       Keyword.has_key?(connection.request_steps, :athena_run) -> "athena"
+      Keyword.has_key?(connection.request_steps, :clickhouse_run) -> "clickhouse"
       true -> nil
     end
   end
@@ -219,8 +220,18 @@ defmodule KinoDB.SQLCell do
     to_quoted(attrs, quote(do: Tds), fn n -> "@#{n}" end)
   end
 
+  # query!/4 based that returns a Req response.
   defp to_quoted(%{"connection" => %{"type" => "clickhouse"}} = attrs) do
-    to_quoted(attrs, quote(do: Ch), fn n -> "{$#{n}:String}" end)
+    to_quoted_query_req(attrs, quote(do: ReqCH), fn n, inner ->
+      name =
+        if String.match?(inner, ~r/[^a-z0-9_]/) do
+          "param_#{n}"
+        else
+          inner
+        end
+
+      "{#{name}:String}"
+    end)
   end
 
   # Explorer-based
@@ -243,6 +254,21 @@ defmodule KinoDB.SQLCell do
 
   defp to_quoted(_ctx) do
     quote do
+    end
+  end
+
+  defp to_quoted_query_req(attrs, quoted_module, next) do
+    {query, params} = parameterize(attrs["query"], attrs["connection"]["type"], next)
+    opts_args = query_opts_args(attrs)
+
+    quote do
+      unquote(quoted_var(attrs["result_variable"])) =
+        unquote(quoted_module).query!(
+          unquote(quoted_var(attrs["connection"]["variable"])),
+          unquote(quoted_query(query)),
+          unquote(params),
+          unquote_splicing(opts_args)
+        ).body
     end
   end
 
@@ -310,6 +336,9 @@ defmodule KinoDB.SQLCell do
   defp query_opts_args(%{"connection" => %{"type" => "athena"}, "cache_query" => cache_query}),
     do: [[cache_query: cache_query]]
 
+  defp query_opts_args(%{"connection" => %{"type" => "clickhouse"}}),
+    do: [[format: :explorer]]
+
   defp query_opts_args(_attrs), do: []
 
   defp parameterize(query, type, next) do
@@ -342,7 +371,7 @@ defmodule KinoDB.SQLCell do
 
   defp parameterize("{{" <> rest = query, raw, params, n, type, next) do
     with [inner, rest] <- String.split(rest, "}}", parts: 2),
-         sql_param <- next.(n),
+         sql_param <- apply_next(next, n, inner),
          {:ok, param} <- quote_param(type, inner, sql_param) do
       parameterize(rest, raw <> sql_param, [param | params], n + 1, type, next)
     else
@@ -352,6 +381,21 @@ defmodule KinoDB.SQLCell do
 
   defp parameterize(<<char::utf8, rest::binary>>, raw, params, n, type, next) do
     parameterize(rest, <<raw::binary, char::utf8>>, params, n, type, next)
+  end
+
+  defp apply_next(next, n, _inner) when is_function(next, 1), do: next.(n)
+  defp apply_next(next, n, inner) when is_function(next, 2), do: next.(n, inner)
+
+  defp quote_param("clickhouse", inner, sql_param) do
+    with {:ok, inner_ast} <- Code.string_to_quoted(inner) do
+      name =
+        sql_param |> String.trim_leading("{") |> String.split(":", parts: 2) |> List.first()
+
+      {:ok,
+       quote do
+         {unquote(name), unquote(inner_ast)}
+       end}
+    end
   end
 
   defp quote_param("sqlserver", inner, sql_param) do

@@ -123,7 +123,7 @@ defmodule KinoDB.SQLCellTest do
              """
 
       assert SQLCell.to_source(put_in(attrs["connection"]["type"], "clickhouse")) == """
-             result = Ch.query!(conn, ~S"SELECT id FROM users", [])\
+             result = ReqCH.query!(conn, ~S"SELECT id FROM users", [], format: :explorer).body\
              """
 
       assert SQLCell.to_source(put_in(attrs["connection"]["type"], "sqlserver")) == """
@@ -212,14 +212,15 @@ defmodule KinoDB.SQLCellTest do
 
       assert SQLCell.to_source(put_in(attrs["connection"]["type"], "clickhouse")) == ~s'''
              result =
-               Ch.query!(
+               ReqCH.query!(
                  conn,
                  ~S"""
                  SELECT id FROM users
                  WHERE last_name = 'Sherlock'
                  """,
-                 []
-               )\
+                 [],
+                 format: :explorer
+               ).body\
              '''
 
       assert SQLCell.to_source(put_in(attrs["connection"]["type"], "sqlserver")) == ~s'''
@@ -295,11 +296,12 @@ defmodule KinoDB.SQLCellTest do
 
       assert SQLCell.to_source(put_in(attrs["connection"]["type"], "clickhouse")) == ~s'''
              result =
-               Ch.query!(
+               ReqCH.query!(
                  conn,
-                 ~S"SELECT id FROM users WHERE id {$1:String} AND name LIKE {$2:String}",
-                 [user_id, search <> \"%\"]
-               )\
+                 ~S"SELECT id FROM users WHERE id {user_id:String} AND name LIKE {param_2:String}",
+                 [{"user_id", user_id}, {"param_2", search <> \"%\"}],
+                 format: :explorer
+               ).body\
              '''
 
       assert SQLCell.to_source(put_in(attrs["connection"]["type"], "sqlserver")) == ~s'''
@@ -402,15 +404,16 @@ defmodule KinoDB.SQLCellTest do
 
       assert SQLCell.to_source(put_in(attrs["connection"]["type"], "clickhouse")) == ~s'''
              result =
-               Ch.query!(
+               ReqCH.query!(
                  conn,
                  ~S"""
                  SELECT id from users
                  -- WHERE id = {{user_id1}}
-                 /* WHERE id = {{user_id2}} */ WHERE id = {$1:String}
+                 /* WHERE id = {{user_id2}} */ WHERE id = {user_id3:String}
                  """,
-                 [user_id3]
-               )\
+                 [{"user_id3", user_id3}],
+                 format: :explorer
+               ).body\
              '''
 
       assert SQLCell.to_source(put_in(attrs["connection"]["type"], "sqlserver")) == ~s'''
@@ -461,7 +464,7 @@ defmodule KinoDB.SQLCellTest do
              """
 
       assert SQLCell.to_source(put_in(attrs["connection"]["type"], "clickhouse")) == """
-             result = Ch.query!(conn, ~S"SELECT id FROM users", [])\
+             result = ReqCH.query!(conn, ~S"SELECT id FROM users", [], format: :explorer).body\
              """
 
       assert SQLCell.to_source(put_in(attrs["connection"]["type"], "sqlserver")) == """
@@ -495,7 +498,7 @@ defmodule KinoDB.SQLCellTest do
              """
 
       assert SQLCell.to_source(put_in(attrs["connection"]["type"], "clickhouse")) == """
-             result = Ch.query!(conn, ~S"SELECT id FROM users", [])\
+             result = ReqCH.query!(conn, ~S"SELECT id FROM users", [], format: :explorer).body\
              """
 
       assert SQLCell.to_source(put_in(attrs["connection"]["type"], "bigquery")) == """

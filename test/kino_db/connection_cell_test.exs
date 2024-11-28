@@ -209,16 +209,14 @@ defmodule KinoDB.ConnectionCellTest do
              '''
 
       assert ConnectionCell.to_source(put_in(attrs["type"], "clickhouse")) == ~s'''
-             opts = [
-               hostname: "localhost",
-               port: 4444,
-               username: "admin",
-               password: "pass",
-               database: "default",
-               scheme: "http"
-             ]
+             conn =
+               ReqCH.new(
+                 database: "default",
+                 auth: {:basic, "admin:pass"},
+                 base_url: "http://localhost:4444"
+               )
 
-             {:ok, conn} = Kino.start_child({Ch, opts})\
+             :ok\
              '''
     end
 

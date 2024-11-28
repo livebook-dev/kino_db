@@ -150,7 +150,9 @@ defmodule KinoDB.ConnectionCell do
               ~w|database hostname port use_ipv6 username password use_ssl cacertfile instance|
 
         "clickhouse" ->
-          ~w|scheme username password_secret hostname port database|
+          if fields["use_password_secret"],
+            do: ~w|hostname port use_ssl username password_secret database|,
+            else: ~w|hostname port use_ssl username password database|
 
         type when type in ["postgres", "mysql"] ->
           if fields["use_password_secret"],
@@ -330,10 +332,15 @@ defmodule KinoDB.ConnectionCell do
   end
 
   defp to_quoted(%{"type" => "clickhouse"} = attrs) do
-    quote do
-      opts = unquote(trim_opts(shared_options(attrs) ++ clickhouse_options(attrs)))
+    trimmed = attrs |> trim_opts() |> Map.new()
+    shared_opts = shared_options(trimmed)
 
-      {:ok, unquote(quoted_var(attrs["variable"]))} = Kino.start_child({Ch, opts})
+    clickhouse_opts = trimmed |> clickhouse_options(shared_opts)
+
+    quote do
+      unquote(quoted_var(attrs["variable"])) = ReqCH.new(unquote(clickhouse_opts))
+
+      :ok
     end
   end
 
@@ -438,9 +445,58 @@ defmodule KinoDB.ConnectionCell do
   end
 
   defp clickhouse_options(attrs) do
-    [
-      scheme: attrs["scheme"] || "http"
-    ]
+    scheme = if attrs["use_ssl"], do: "https", else: "http"
+
+    [scheme: scheme]
+  end
+
+  defp clickhouse_options(attrs, shared_options) do
+    attrs
+    |> clickhouse_options()
+    |> build_clickhouse_base_url(shared_options)
+    |> maybe_add_req_basic_auth(shared_options)
+    |> maybe_add_clickhouse_database(shared_options)
+  end
+
+  defp build_clickhouse_base_url(opts, shared_opts) do
+    host = Keyword.fetch!(shared_opts, :hostname)
+    port = Keyword.fetch!(shared_opts, :port)
+    scheme = Keyword.fetch!(opts, :scheme)
+
+    uri = %URI{scheme: scheme, port: port, host: host}
+
+    opts
+    |> Keyword.put_new(:base_url, URI.to_string(uri))
+    |> Keyword.delete(:scheme)
+  end
+
+  defp maybe_add_req_basic_auth(opts, shared_opts) do
+    username = shared_opts[:username]
+
+    if username != "" do
+      password = shared_opts[:password]
+
+      auth =
+        if is_binary(password) do
+          "#{username}:#{password}"
+        else
+          quote do
+            unquote(username) <> ":" <> unquote(password)
+          end
+        end
+
+      Keyword.put_new(opts, :auth, {:basic, auth})
+    else
+      opts
+    end
+  end
+
+  defp maybe_add_clickhouse_database(opts, shared_opts) do
+    if shared_opts[:database] != "" do
+      Keyword.put_new(opts, :database, shared_opts[:database])
+    else
+      opts
+    end
   end
 
   defp quoted_var(string), do: {String.to_atom(string), [], nil}
@@ -462,6 +518,7 @@ defmodule KinoDB.ConnectionCell do
       Code.ensure_loaded?(Exqlite) -> "sqlite"
       Code.ensure_loaded?(ReqBigQuery) -> "bigquery"
       Code.ensure_loaded?(ReqAthena) -> "athena"
+      Code.ensure_loaded?(ReqCH) -> "clickhouse"
       Code.ensure_loaded?(Adbc) -> "duckdb"
       Code.ensure_loaded?(Tds) -> "sqlserver"
       true -> "postgres"
@@ -493,16 +550,10 @@ defmodule KinoDB.ConnectionCell do
   end
 
   defp missing_dep(%{"type" => "athena"}) do
-    deps = [
+    missing_many_deps([
       {ReqAthena, ~s|{:req_athena, "~> 0.1"}|},
       {Explorer, ~s|{:explorer, "~> 0.9"}|}
-    ]
-
-    deps = for {module, dep} <- deps, not Code.ensure_loaded?(module), do: dep
-
-    if deps != [] do
-      Enum.join(deps, ", ")
-    end
+    ])
   end
 
   defp missing_dep(%{"type" => adbc}) when adbc in ~w[snowflake duckdb] do
@@ -518,12 +569,21 @@ defmodule KinoDB.ConnectionCell do
   end
 
   defp missing_dep(%{"type" => "clickhouse"}) do
-    unless Code.ensure_loaded?(Ch) do
-      ~s|{:ch, "~> 0.2"}|
-    end
+    missing_many_deps([
+      {ReqCH, ~s|{:req_ch, "~> 0.1"}|},
+      {Explorer, ~s|{:explorer, "~> 0.10"}|}
+    ])
   end
 
   defp missing_dep(_ctx), do: nil
+
+  defp missing_many_deps(deps) do
+    deps = for {module, dep} <- deps, not Code.ensure_loaded?(module), do: dep
+
+    if deps != [] do
+      Enum.join(deps, ", ")
+    end
+  end
 
   defp join_quoted(quoted_blocks) do
     asts =
