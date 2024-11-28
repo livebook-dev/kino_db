@@ -420,7 +420,7 @@ defmodule KinoDB.SQLCell do
 
   defp missing_dep(%{type: adbc}) when adbc in ~w[snowflake duckdb] do
     unless Code.ensure_loaded?(Explorer) do
-      ~s|{:explorer, "~> 0.8"}|
+      ~s|{:explorer, "~> 0.10"}|
     end
   end
 

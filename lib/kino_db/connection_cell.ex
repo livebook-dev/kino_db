@@ -552,7 +552,7 @@ defmodule KinoDB.ConnectionCell do
   defp missing_dep(%{"type" => "athena"}) do
     missing_many_deps([
       {ReqAthena, ~s|{:req_athena, "~> 0.1"}|},
-      {Explorer, ~s|{:explorer, "~> 0.9"}|}
+      {Explorer, ~s|{:explorer, "~> 0.10"}|}
     ])
   end
 
