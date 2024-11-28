@@ -570,7 +570,7 @@ defmodule KinoDB.ConnectionCell do
 
   defp missing_dep(%{"type" => "clickhouse"}) do
     missing_many_deps([
-      {ReqCH, ~s|{:req_ch, git: "https://github.com/livebook-dev/req_ch.git"}|},
+      {ReqCH, ~s|{:req_ch, "~> 0.1"}|},
       {Explorer, ~s|{:explorer, "~> 0.10"}|}
     ])
   end
