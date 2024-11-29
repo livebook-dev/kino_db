@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v0.2.14](https://github.com/livebook-dev/kino_db/tree/v0.2.14) (2024-11-29)
+
+### Added
+
+* Support for ClickHouse ([#82](https://github.com/livebook-dev/kino_db/pull/82))
+
+### Fixed
+
+* Trim values for connection options ([#80](https://github.com/livebook-dev/kino_db/pull/80))
+
 ## [v0.2.13](https://github.com/livebook-dev/kino_db/tree/v0.2.13) (2024-09-14)
 
 ### Changed

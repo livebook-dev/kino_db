@@ -2,9 +2,9 @@
 
 ```elixir
 Mix.install([
-  # {:postgrex, "~> 0.18"},
+  # {:postgrex, "~> 0.19"},
   # {:myxql, "~> 0.7.0"},
-  {:kino_db, "~> 0.2.10"}
+  {:kino_db, "~> 0.2.14"}
 ])
 ```
 
