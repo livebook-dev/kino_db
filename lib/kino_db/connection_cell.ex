@@ -33,7 +33,7 @@ defmodule KinoDB.ConnectionCell do
       "database" => attrs["database"] || "",
       "project_id" => attrs["project_id"] || "",
       "default_dataset_id" => attrs["default_dataset_id"] || "",
-      "credentials" => attrs["credentials"] || %{},
+      "credentials_json" => attrs["credentials_json"] || "",
       "access_key_id" => attrs["access_key_id"] || "",
       "secret_access_key" => secret_access_key,
       "use_secret_access_key_secret" =>
@@ -128,7 +128,7 @@ defmodule KinoDB.ConnectionCell do
           ~w|database_path|
 
         "bigquery" ->
-          ~w|project_id default_dataset_id credentials|
+          ~w|project_id default_dataset_id credentials_json|
 
         "athena" ->
           if fields["use_secret_access_key_secret"],
@@ -267,6 +267,37 @@ defmodule KinoDB.ConnectionCell do
     end
   end
 
+  defp to_quoted(%{"type" => "bigquery"} = attrs) do
+    var = quoted_var(attrs["variable"])
+
+    opts =
+      [
+        driver: :bigquery,
+        "adbc.bigquery.sql.project_id": attrs["project_id"]
+      ] ++
+        case attrs["default_dataset_id"] do
+          "" -> []
+          dataset_id -> ["adbc.bigquery.sql.dataset_id": dataset_id]
+        end ++
+        case attrs["credentials_json"] do
+          "" ->
+            []
+
+          credentials_json ->
+            [
+              "adbc.bigquery.sql.auth_type": "adbc.bigquery.sql.auth_type.json_credential_string",
+              "adbc.bigquery.sql.auth_credentials":
+                {:sigil_S, [delimiter: ~s["""]], [{:<<>>, [], [credentials_json <> "\n"]}, []]}
+            ]
+        end
+
+    quote do
+      :ok = Adbc.download_driver!(:bigquery)
+      {:ok, db} = Kino.start_child({Adbc.Database, unquote(opts)})
+      {:ok, unquote(var)} = Kino.start_child({Adbc.Connection, database: db})
+    end
+  end
+
   defp to_quoted(%{"type" => "postgres"} = attrs) do
     quote do
       opts = unquote(trim_opts(shared_options(attrs) ++ postgres_and_mysql_options(attrs)))
@@ -291,40 +322,18 @@ defmodule KinoDB.ConnectionCell do
     end
   end
 
-  defp to_quoted(%{"type" => "bigquery"} = attrs) do
-    goth_opts_block = check_bigquery_credentials(attrs)
-
-    conn_block =
-      quote do
-        {:ok, _pid} = Kino.start_child({Goth, opts})
-
-        unquote(quoted_var(attrs["variable"])) =
-          Req.new(http_errors: :raise)
-          |> ReqBigQuery.attach(
-            goth: ReqBigQuery.Goth,
-            project_id: unquote(attrs["project_id"]),
-            default_dataset_id: unquote(attrs["default_dataset_id"])
-          )
-
-        :ok
-      end
-
-    join_quoted([goth_opts_block, conn_block])
-  end
-
   defp to_quoted(%{"type" => "athena"} = attrs) do
     quote do
       unquote(quoted_var(attrs["variable"])) =
-        Req.new(http_errors: :raise)
-        |> ReqAthena.attach(
-          format: :explorer,
+        ReqAthena.new(
           access_key_id: unquote(attrs["access_key_id"]),
           database: unquote(attrs["database"]),
           output_location: unquote(attrs["output_location"]),
           region: unquote(attrs["region"]),
           secret_access_key: unquote(quoted_access_key(attrs)),
           token: unquote(attrs["token"]),
-          workgroup: unquote(attrs["workgroup"])
+          workgroup: unquote(attrs["workgroup"]),
+          http_errors: :raise
         )
 
       :ok
@@ -351,37 +360,6 @@ defmodule KinoDB.ConnectionCell do
   defp quoted_access_key(%{"secret_access_key_secret" => secret}) do
     quote do
       System.fetch_env!(unquote("LB_#{secret}"))
-    end
-  end
-
-  defp check_bigquery_credentials(attrs) do
-    case attrs["credentials"] do
-      %{"type" => "service_account"} ->
-        quote do
-          credentials = unquote(Macro.escape(attrs["credentials"]))
-
-          opts = [
-            name: ReqBigQuery.Goth,
-            http_client: &Req.request/1,
-            source: {:service_account, credentials}
-          ]
-        end
-
-      %{"type" => "authorized_user"} ->
-        quote do
-          credentials = unquote(Macro.escape(attrs["credentials"]))
-
-          opts = [
-            name: ReqBigQuery.Goth,
-            http_client: &Req.request/1,
-            source: {:refresh_token, credentials}
-          ]
-        end
-
-      _empty_map ->
-        quote do
-          opts = [name: ReqBigQuery.Goth, http_client: &Req.request/1]
-        end
     end
   end
 
@@ -516,7 +494,6 @@ defmodule KinoDB.ConnectionCell do
       Code.ensure_loaded?(Postgrex) -> "postgres"
       Code.ensure_loaded?(MyXQL) -> "mysql"
       Code.ensure_loaded?(Exqlite) -> "sqlite"
-      Code.ensure_loaded?(ReqBigQuery) -> "bigquery"
       Code.ensure_loaded?(ReqAthena) -> "athena"
       Code.ensure_loaded?(ReqCH) -> "clickhouse"
       Code.ensure_loaded?(Adbc) -> "duckdb"
@@ -543,20 +520,14 @@ defmodule KinoDB.ConnectionCell do
     end
   end
 
-  defp missing_dep(%{"type" => "bigquery"}) do
-    unless Code.ensure_loaded?(ReqBigQuery) do
-      ~s|{:req_bigquery, "~> 0.1"}|
-    end
-  end
-
   defp missing_dep(%{"type" => "athena"}) do
     missing_many_deps([
-      {ReqAthena, ~s|{:req_athena, "~> 0.1"}|},
+      {ReqAthena, ~s|{:req_athena, "~> 0.3"}|},
       {Explorer, ~s|{:explorer, "~> 0.10"}|}
     ])
   end
 
-  defp missing_dep(%{"type" => adbc}) when adbc in ~w[snowflake duckdb] do
+  defp missing_dep(%{"type" => adbc}) when adbc in ~w[snowflake duckdb bigquery] do
     unless Code.ensure_loaded?(Adbc) do
       ~s|{:adbc, "~> 0.3"}|
     end
@@ -582,19 +553,6 @@ defmodule KinoDB.ConnectionCell do
 
     if deps != [] do
       Enum.join(deps, ", ")
-    end
-  end
-
-  defp join_quoted(quoted_blocks) do
-    asts =
-      Enum.flat_map(quoted_blocks, fn
-        {:__block__, _meta, nodes} -> nodes
-        node -> [node]
-      end)
-
-    case asts do
-      [node] -> node
-      nodes -> {:__block__, [], nodes}
     end
   end
 
