@@ -496,10 +496,16 @@ defmodule KinoDB.ConnectionCell do
       Code.ensure_loaded?(Exqlite) -> "sqlite"
       Code.ensure_loaded?(ReqAthena) -> "athena"
       Code.ensure_loaded?(ReqCH) -> "clickhouse"
-      Code.ensure_loaded?(Adbc) -> "duckdb"
+      Code.ensure_loaded?(Adbc) -> adbc_default_db_type()
       Code.ensure_loaded?(Tds) -> "sqlserver"
       true -> "postgres"
     end
+  end
+
+  defp adbc_default_db_type() do
+    drivers = Application.get_env(:adbc, :drivers, [])
+    driver = Enum.find([:duckdb, :snowflake, :bigquery], :duckdb, &(&1 in drivers))
+    Atom.to_string(driver)
   end
 
   defp missing_dep(%{"type" => "postgres"}) do
@@ -527,7 +533,7 @@ defmodule KinoDB.ConnectionCell do
     ])
   end
 
-  defp missing_dep(%{"type" => adbc}) when adbc in ~w[snowflake duckdb bigquery] do
+  defp missing_dep(%{"type" => adbc}) when adbc in ~w[duckdb snowflake bigquery] do
     unless Code.ensure_loaded?(Adbc) do
       ~s|{:adbc, "~> 0.3"}|
     end
