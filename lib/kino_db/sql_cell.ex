@@ -23,7 +23,7 @@ defmodule KinoDB.SQLCell do
         result_variable: Kino.SmartCell.prefixed_var_name("result", attrs["result_variable"]),
         query: query,
         timeout: attrs["timeout"],
-        cache_query: attrs["cache_query"] || true,
+        cache_query: Map.get(attrs, "cache_query", true),
         data_frame_alias: Explorer.DataFrame,
         missing_dep: missing_dep(connection)
       )
@@ -165,7 +165,6 @@ defmodule KinoDB.SQLCell do
 
   defp connection_type(connection) when is_struct(connection, Req.Request) do
     cond do
-      Keyword.has_key?(connection.request_steps, :bigquery_run) -> "bigquery"
       Keyword.has_key?(connection.request_steps, :athena_run) -> "athena"
       Keyword.has_key?(connection.request_steps, :clickhouse_run) -> "clickhouse"
       true -> nil
@@ -220,9 +219,26 @@ defmodule KinoDB.SQLCell do
     to_quoted(attrs, quote(do: Tds), fn n -> "@#{n}" end)
   end
 
-  # query!/4 based that returns a Req response.
+  # Explorer-based
+  defp to_quoted(%{"connection" => %{"type" => "snowflake"}} = attrs) do
+    to_quoted_explorer(attrs, fn n -> "?#{n}" end)
+  end
+
+  defp to_quoted(%{"connection" => %{"type" => "duckdb"}} = attrs) do
+    to_quoted_explorer(attrs, fn n -> "?#{n}" end)
+  end
+
+  defp to_quoted(%{"connection" => %{"type" => "bigquery"}} = attrs) do
+    to_quoted_explorer(attrs, fn _n -> "?" end)
+  end
+
+  # Req-based
+  defp to_quoted(%{"connection" => %{"type" => "athena"}} = attrs) do
+    to_quoted_req_query(attrs, quote(do: ReqAthena), fn _n -> "?" end)
+  end
+
   defp to_quoted(%{"connection" => %{"type" => "clickhouse"}} = attrs) do
-    to_quoted_query_req(attrs, quote(do: ReqCH), fn n, inner ->
+    to_quoted_req_query(attrs, quote(do: ReqCH), fn n, inner ->
       name =
         if String.match?(inner, ~r/[^a-z0-9_]/) do
           "param_#{n}"
@@ -234,41 +250,8 @@ defmodule KinoDB.SQLCell do
     end)
   end
 
-  # Explorer-based
-  defp to_quoted(%{"connection" => %{"type" => "snowflake"}} = attrs) do
-    to_explorer_quoted(attrs, fn n -> "?#{n}" end)
-  end
-
-  defp to_quoted(%{"connection" => %{"type" => "duckdb"}} = attrs) do
-    to_explorer_quoted(attrs, fn n -> "?#{n}" end)
-  end
-
-  # Req-based
-  defp to_quoted(%{"connection" => %{"type" => "bigquery"}} = attrs) do
-    to_req_quoted(attrs, fn _n -> "?" end, :bigquery)
-  end
-
-  defp to_quoted(%{"connection" => %{"type" => "athena"}} = attrs) do
-    to_req_quoted(attrs, fn _n -> "?" end, :athena)
-  end
-
   defp to_quoted(_ctx) do
     quote do
-    end
-  end
-
-  defp to_quoted_query_req(attrs, quoted_module, next) do
-    {query, params} = parameterize(attrs["query"], attrs["connection"]["type"], next)
-    opts_args = query_opts_args(attrs)
-
-    quote do
-      unquote(quoted_var(attrs["result_variable"])) =
-        unquote(quoted_module).query!(
-          unquote(quoted_var(attrs["connection"]["variable"])),
-          unquote(quoted_query(query)),
-          unquote(params),
-          unquote_splicing(opts_args)
-        ).body
     end
   end
 
@@ -287,22 +270,7 @@ defmodule KinoDB.SQLCell do
     end
   end
 
-  defp to_req_quoted(attrs, next, req_key) do
-    {query, params} = parameterize(attrs["query"], attrs["connection"]["type"], next)
-    query = {quoted_query(query), params}
-    opts = query_opts_args(attrs)
-    req_opts = opts |> Enum.at(0, []) |> Keyword.put(req_key, query)
-
-    quote do
-      unquote(quoted_var(attrs["result_variable"])) =
-        Req.post!(
-          unquote(quoted_var(attrs["connection"]["variable"])),
-          unquote(req_opts)
-        ).body
-    end
-  end
-
-  defp to_explorer_quoted(attrs, next) do
+  defp to_quoted_explorer(attrs, next) do
     {query, params} = parameterize(attrs["query"], attrs["connection"]["type"], next)
     data_frame_alias = attrs["data_frame_alias"]
 
@@ -313,6 +281,21 @@ defmodule KinoDB.SQLCell do
           unquote(quoted_query(query)),
           unquote(params)
         )
+    end
+  end
+
+  defp to_quoted_req_query(attrs, quoted_module, next) do
+    {query, params} = parameterize(attrs["query"], attrs["connection"]["type"], next)
+    opts_args = query_opts_args(attrs)
+
+    quote do
+      unquote(quoted_var(attrs["result_variable"])) =
+        unquote(quoted_module).query!(
+          unquote(quoted_var(attrs["connection"]["variable"])),
+          unquote(quoted_query(query)),
+          unquote(params),
+          unquote_splicing(opts_args)
+        ).body
     end
   end
 
@@ -333,8 +316,9 @@ defmodule KinoDB.SQLCell do
        when timeout != nil and type in @connection_types_with_timeout,
        do: [[timeout: timeout * 1000]]
 
-  defp query_opts_args(%{"connection" => %{"type" => "athena"}, "cache_query" => cache_query}),
-    do: [[cache_query: cache_query]]
+  defp query_opts_args(%{"connection" => %{"type" => "athena"}} = attrs) do
+    [[format: :explorer] ++ if(attrs["cache_query"], do: [], else: [cache_query: false])]
+  end
 
   defp query_opts_args(%{"connection" => %{"type" => "clickhouse"}}),
     do: [[format: :explorer]]
@@ -418,7 +402,7 @@ defmodule KinoDB.SQLCell do
     end
   end
 
-  defp missing_dep(%{type: adbc}) when adbc in ~w[snowflake duckdb] do
+  defp missing_dep(%{type: adbc}) when adbc in ~w[snowflake duckdb bigquery] do
     unless Code.ensure_loaded?(Explorer) do
       ~s|{:explorer, "~> 0.10"}|
     end
