@@ -37,8 +37,7 @@ defmodule KinoDB.MixProject do
       {:explorer, "~> 0.10", optional: true},
 
       # Those dependecies are new, so we use stricter versions
-      # TODO bump to 0.3.0
-      {:req_athena, "~> 0.2.0", optional: true},
+      {:req_athena, "~> 0.3.0", optional: true},
       {:req_ch, "~> 0.1.0", optional: true},
 
       # Dev only
