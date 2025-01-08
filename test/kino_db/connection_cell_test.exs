@@ -22,7 +22,7 @@ defmodule KinoDB.ConnectionCellTest do
     "database" => "default",
     "database_path" => "/path/to/sqlite3.db",
     "project_id" => "foo",
-    "credentials" => %{},
+    "credentials_json" => "",
     "default_dataset_id" => "",
     "access_key_id" => "id",
     "secret_access_key" => "secret",
@@ -150,29 +150,17 @@ defmodule KinoDB.ConnectionCellTest do
              {:ok, db} = Kino.start_child({Exqlite, opts})\
              '''
 
-      assert ConnectionCell.to_source(put_in(@attrs["type"], "bigquery")) == ~s'''
-             opts = [name: ReqBigQuery.Goth, http_client: &Req.request/1]
-             {:ok, _pid} = Kino.start_child({Goth, opts})
-
-             db =
-               Req.new(http_errors: :raise)
-               |> ReqBigQuery.attach(goth: ReqBigQuery.Goth, project_id: "foo", default_dataset_id: "")
-
-             :ok\
-             '''
-
       assert ConnectionCell.to_source(put_in(@attrs["type"], "athena")) == ~s'''
              db =
-               Req.new(http_errors: :raise)
-               |> ReqAthena.attach(
-                 format: :explorer,
+               ReqAthena.new(
                  access_key_id: "id",
                  database: "default",
                  output_location: "s3://my-bucket",
                  region: "region",
                  secret_access_key: "secret",
                  token: "token",
-                 workgroup: "primary"
+                 workgroup: "primary",
+                 http_errors: :raise
                )
 
              :ok\
@@ -184,16 +172,15 @@ defmodule KinoDB.ConnectionCellTest do
 
       assert ConnectionCell.to_source(attrs) == ~s'''
              db =
-               Req.new(http_errors: :raise)
-               |> ReqAthena.attach(
-                 format: :explorer,
+               ReqAthena.new(
                  access_key_id: "id",
                  database: "default",
                  output_location: "s3://my-bucket",
                  region: "region",
                  secret_access_key: System.fetch_env!("LB_ATHENA_KEY"),
                  token: "token",
-                 workgroup: "primary"
+                 workgroup: "primary",
+                 http_errors: :raise
                )
 
              :ok\
@@ -217,6 +204,17 @@ defmodule KinoDB.ConnectionCellTest do
                )
 
              :ok\
+             '''
+
+      assert ConnectionCell.to_source(put_in(attrs["type"], "bigquery")) == ~s'''
+             :ok = Adbc.download_driver!(:bigquery)
+
+             {:ok, db} =
+               Kino.start_child(
+                 {Adbc.Database, driver: :bigquery, "adbc.bigquery.sql.project_id": "foo"}
+               )
+
+             {:ok, conn} = Kino.start_child({Adbc.Connection, database: db})\
              '''
     end
 
@@ -341,16 +339,15 @@ defmodule KinoDB.ConnectionCellTest do
       %{"secret_access_key_secret" => "ATHENA_KEY"},
       """
       conn =
-        Req.new(http_errors: :raise)
-        |> ReqAthena.attach(
-          format: :explorer,
+        ReqAthena.new(
           access_key_id: "id",
           database: "default",
           output_location: "s3://my-bucket",
           region: "region",
           secret_access_key: System.fetch_env!("LB_ATHENA_KEY"),
           token: "token",
-          workgroup: "primary"
+          workgroup: "primary",
+          http_errors: :raise
         )
 
       :ok\

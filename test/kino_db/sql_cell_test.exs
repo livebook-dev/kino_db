@@ -93,6 +93,7 @@ defmodule KinoDB.SQLCellTest do
       attrs = %{
         "connection" => %{"variable" => "conn", "type" => "postgres"},
         "result_variable" => "result",
+        "cache_query" => true,
         "timeout" => nil,
         "query" => "SELECT id FROM users",
         "data_frame_alias" => Explorer.DataFrame
@@ -111,11 +112,11 @@ defmodule KinoDB.SQLCellTest do
              """
 
       assert SQLCell.to_source(put_in(attrs["connection"]["type"], "bigquery")) == """
-             result = Req.post!(conn, bigquery: {~S"SELECT id FROM users", []}).body\
+             result = Explorer.DataFrame.from_query!(conn, ~S"SELECT id FROM users", [])\
              """
 
       assert SQLCell.to_source(put_in(attrs["connection"]["type"], "athena")) == """
-             result = Req.post!(conn, athena: {~S"SELECT id FROM users", []}).body\
+             result = ReqAthena.query!(conn, ~S"SELECT id FROM users", [], format: :explorer).body\
              """
 
       assert SQLCell.to_source(put_in(attrs["connection"]["type"], "snowflake")) == """
@@ -135,6 +136,7 @@ defmodule KinoDB.SQLCellTest do
       attrs = %{
         "connection" => %{"variable" => "conn", "type" => "postgres"},
         "result_variable" => "result",
+        "cache_query" => true,
         "timeout" => nil,
         "query" => "SELECT id FROM users\nWHERE last_name = 'Sherlock'",
         "data_frame_alias" => Explorer.DataFrame
@@ -178,23 +180,26 @@ defmodule KinoDB.SQLCellTest do
 
       assert SQLCell.to_source(put_in(attrs["connection"]["type"], "bigquery")) == ~s'''
              result =
-               Req.post!(conn,
-                 bigquery:
-                   {~S"""
-                    SELECT id FROM users
-                    WHERE last_name = 'Sherlock'
-                    """, []}
-               ).body\
+               Explorer.DataFrame.from_query!(
+                 conn,
+                 ~S"""
+                 SELECT id FROM users
+                 WHERE last_name = 'Sherlock'
+                 """,
+                 []
+               )\
              '''
 
       assert SQLCell.to_source(put_in(attrs["connection"]["type"], "athena")) == ~s'''
              result =
-               Req.post!(conn,
-                 athena:
-                   {~S"""
-                    SELECT id FROM users
-                    WHERE last_name = 'Sherlock'
-                    """, []}
+               ReqAthena.query!(
+                 conn,
+                 ~S"""
+                 SELECT id FROM users
+                 WHERE last_name = 'Sherlock'
+                 """,
+                 [],
+                 format: :explorer
                ).body\
              '''
 
@@ -240,6 +245,7 @@ defmodule KinoDB.SQLCellTest do
       attrs = %{
         "connection" => %{"variable" => "conn", "type" => "postgres"},
         "result_variable" => "result",
+        "cache_query" => true,
         "timeout" => nil,
         "query" => ~s/SELECT id FROM users WHERE id {{user_id}} AND name LIKE {{search <> "%"}}/,
         "data_frame_alias" => Explorer.DataFrame
@@ -271,17 +277,20 @@ defmodule KinoDB.SQLCellTest do
 
       assert SQLCell.to_source(put_in(attrs["connection"]["type"], "bigquery")) == ~s'''
              result =
-               Req.post!(conn,
-                 bigquery:
-                   {~S"SELECT id FROM users WHERE id ? AND name LIKE ?", [user_id, search <> "%"]}
-               ).body\
+               Explorer.DataFrame.from_query!(
+                 conn,
+                 ~S"SELECT id FROM users WHERE id ? AND name LIKE ?",
+                 [user_id, search <> \"%\"]
+               )\
              '''
 
       assert SQLCell.to_source(put_in(attrs["connection"]["type"], "athena")) == ~s'''
              result =
-               Req.post!(conn,
-                 athena:
-                   {~S"SELECT id FROM users WHERE id ? AND name LIKE ?", [user_id, search <> "%"]}
+               ReqAthena.query!(
+                 conn,
+                 ~S"SELECT id FROM users WHERE id ? AND name LIKE ?",
+                 [user_id, search <> "%"],
+                 format: :explorer
                ).body\
              '''
 
@@ -317,6 +326,7 @@ defmodule KinoDB.SQLCellTest do
       attrs = %{
         "connection" => %{"variable" => "conn", "type" => "postgres"},
         "result_variable" => "result",
+        "cache_query" => true,
         "timeout" => nil,
         "query" => """
         SELECT id from users
@@ -367,25 +377,28 @@ defmodule KinoDB.SQLCellTest do
 
       assert SQLCell.to_source(put_in(attrs["connection"]["type"], "bigquery")) == ~s'''
              result =
-               Req.post!(conn,
-                 bigquery:
-                   {~S"""
-                    SELECT id from users
-                    -- WHERE id = {{user_id1}}
-                    /* WHERE id = {{user_id2}} */ WHERE id = ?
-                    """, [user_id3]}
-               ).body\
+               Explorer.DataFrame.from_query!(
+                 conn,
+                 ~S"""
+                 SELECT id from users
+                 -- WHERE id = {{user_id1}}
+                 /* WHERE id = {{user_id2}} */ WHERE id = ?
+                 """,
+                 [user_id3]
+               )\
              '''
 
       assert SQLCell.to_source(put_in(attrs["connection"]["type"], "athena")) == ~s'''
              result =
-               Req.post!(conn,
-                 athena:
-                   {~S"""
-                    SELECT id from users
-                    -- WHERE id = {{user_id1}}
-                    /* WHERE id = {{user_id2}} */ WHERE id = ?
-                    """, [user_id3]}
+               ReqAthena.query!(
+                 conn,
+                 ~S"""
+                 SELECT id from users
+                 -- WHERE id = {{user_id1}}
+                 /* WHERE id = {{user_id2}} */ WHERE id = ?
+                 """,
+                 [user_id3],
+                 format: :explorer
                ).body\
              '''
 
@@ -434,6 +447,7 @@ defmodule KinoDB.SQLCellTest do
       attrs = %{
         "connection" => %{"variable" => "conn", "type" => "postgres"},
         "result_variable" => "result",
+        "cache_query" => true,
         "timeout" => 30,
         "query" => "SELECT id FROM users",
         "data_frame_alias" => Explorer.DataFrame
@@ -452,11 +466,11 @@ defmodule KinoDB.SQLCellTest do
              """
 
       assert SQLCell.to_source(put_in(attrs["connection"]["type"], "bigquery")) == """
-             result = Req.post!(conn, bigquery: {~S"SELECT id FROM users", []}).body\
+             result = Explorer.DataFrame.from_query!(conn, ~S"SELECT id FROM users", [])\
              """
 
       assert SQLCell.to_source(put_in(attrs["connection"]["type"], "athena")) == """
-             result = Req.post!(conn, athena: {~S"SELECT id FROM users", []}).body\
+             result = ReqAthena.query!(conn, ~S"SELECT id FROM users", [], format: :explorer).body\
              """
 
       assert SQLCell.to_source(put_in(attrs["connection"]["type"], "snowflake")) == """
@@ -502,17 +516,21 @@ defmodule KinoDB.SQLCellTest do
              """
 
       assert SQLCell.to_source(put_in(attrs["connection"]["type"], "bigquery")) == """
-             result = Req.post!(conn, bigquery: {~S"SELECT id FROM users", []}).body\
+             result = DF.from_query!(conn, ~S"SELECT id FROM users", [])\
              """
 
       athena = put_in(attrs["connection"]["type"], "athena")
 
       assert SQLCell.to_source(put_in(athena["cache_query"], true)) == """
-             result = Req.post!(conn, athena: {~S"SELECT id FROM users", []}, cache_query: true).body\
+             result = ReqAthena.query!(conn, ~S"SELECT id FROM users", [], format: :explorer).body\
              """
 
       assert SQLCell.to_source(put_in(athena["cache_query"], false)) == """
-             result = Req.post!(conn, athena: {~S"SELECT id FROM users", []}, cache_query: false).body\
+             result =
+               ReqAthena.query!(conn, ~S"SELECT id FROM users", [],
+                 format: :explorer,
+                 cache_query: false
+               ).body\
              """
 
       assert SQLCell.to_source(put_in(attrs["connection"]["type"], "sqlserver")) == """
@@ -524,6 +542,7 @@ defmodule KinoDB.SQLCellTest do
       attrs = %{
         "connection" => %{"variable" => "conn", "type" => "postgres"},
         "result_variable" => "result",
+        "cache_query" => true,
         "timeout" => nil,
         "query" => "SELECT id FROM users WHERE last_name = '\#{user_id}'",
         "data_frame_alias" => Explorer.DataFrame
