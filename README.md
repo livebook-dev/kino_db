@@ -12,7 +12,7 @@ To bring KinoDB to Livebook all you need to do is `Mix.install/2`:
 
 ```elixir
 Mix.install([
-  {:kino_db, "~> 0.2.10"}
+  {:kino_db, "~> 0.3.0"}
 ])
 ```
 
