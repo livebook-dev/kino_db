@@ -33,7 +33,7 @@ defmodule KinoDB.ConnectionCellTest do
     "use_private_key_secret" => false,
     "private_key_secret" => "",
     "use_encrypted_private_key" => false,
-    "private_key_passphrase" => "secret",
+    "private_key_passphrase" => "passphrase",
     "use_private_key_passphrase_secret" => false,
     "private_key_passphrase_secret" => "",
     "token" => "token",
@@ -216,6 +216,59 @@ defmodule KinoDB.ConnectionCellTest do
                   "adbc.snowflake.sql.warehouse": "",
                   "adbc.snowflake.sql.auth_type": "auth_snowflake",
                   password: "pass"}
+               )
+
+             {:ok, conn} = Kino.start_child({Adbc.Connection, database: db})\
+             '''
+
+      attrs =
+        Map.delete(@attrs, "private_key_secret")
+        |> Map.merge(%{"variable" => "conn", "auth_type" => "auth_jwt"})
+
+      assert ConnectionCell.to_source(put_in(attrs["type"], "snowflake")) == ~s'''
+             :ok = Adbc.download_driver!(:snowflake)
+
+             {:ok, db} =
+               Kino.start_child(
+                 {Adbc.Database,
+                  driver: :snowflake,
+                  username: "admin",
+                  "adbc.snowflake.sql.account": "account",
+                  "adbc.snowflake.sql.db": "default",
+                  "adbc.snowflake.sql.schema": "schema",
+                  "adbc.snowflake.sql.warehouse": "",
+                  "adbc.snowflake.sql.auth_type": "auth_jwt",
+                  "adbc.snowflake.sql.client_option.jwt_private_key_pkcs8_value":
+                    "-----BEGIN PRIVATE KEY-----..."}
+               )
+
+             {:ok, conn} = Kino.start_child({Adbc.Connection, database: db})\
+             '''
+
+      attrs =
+        Map.drop(@attrs, ["private_key_secret", "private_key_passphrase_secret"])
+        |> Map.merge(%{
+          "variable" => "conn",
+          "auth_type" => "auth_jwt",
+          "use_encrypted_private_key" => true
+        })
+
+      assert ConnectionCell.to_source(put_in(attrs["type"], "snowflake")) == ~s'''
+             :ok = Adbc.download_driver!(:snowflake)
+
+             {:ok, db} =
+               Kino.start_child(
+                 {Adbc.Database,
+                  driver: :snowflake,
+                  username: "admin",
+                  "adbc.snowflake.sql.account": "account",
+                  "adbc.snowflake.sql.db": "default",
+                  "adbc.snowflake.sql.schema": "schema",
+                  "adbc.snowflake.sql.warehouse": "",
+                  "adbc.snowflake.sql.auth_type": "auth_jwt",
+                  "adbc.snowflake.sql.client_option.jwt_private_key_pkcs8_value":
+                    "-----BEGIN PRIVATE KEY-----...",
+                  "adbc.snowflake.sql.client_option.jwt_private_key_pkcs8_password": "passphrase"}
                )
 
              {:ok, conn} = Kino.start_child({Adbc.Connection, database: db})\
