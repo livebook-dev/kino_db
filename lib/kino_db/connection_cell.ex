@@ -16,6 +16,10 @@ defmodule KinoDB.ConnectionCell do
 
     password = attrs["password"] || ""
     secret_access_key = attrs["secret_access_key"] || ""
+    priv_key = attrs["private_key"] || ""
+    priv_key_passphrase = attrs["private_key_passphrase"] || ""
+
+    auth_type = attrs["auth_type"] || ""
 
     fields = %{
       "variable" => Kino.SmartCell.prefixed_var_name("conn", attrs["variable"]),
@@ -26,6 +30,7 @@ defmodule KinoDB.ConnectionCell do
       "use_ipv6" => Map.get(attrs, "use_ipv6", false),
       "use_ssl" => Map.get(attrs, "use_ssl", false),
       "cacertfile" => attrs["cacertfile"] || "",
+      "auth_type" => auth_type,
       "username" => attrs["username"] || "",
       "password" => password,
       "use_password_secret" => Map.has_key?(attrs, "password_secret") || password == "",
@@ -39,12 +44,21 @@ defmodule KinoDB.ConnectionCell do
       "use_secret_access_key_secret" =>
         Map.has_key?(attrs, "secret_access_key_secret") || secret_access_key == "",
       "secret_access_key_secret" => attrs["secret_access_key_secret"] || "",
+      "private_key" => priv_key,
+      "use_private_key_secret" => Map.has_key?(attrs, "use_private_key_secret") || priv_key == "",
+      "private_key_secret" => attrs["private_key_secret"] || "",
+      "use_encrypted_private_key" => Map.get(attrs, "use_encrypted_private_key", false),
+      "private_key_passphrase" => priv_key_passphrase,
+      "use_private_key_passphrase_secret" =>
+        Map.has_key?(attrs, "use_private_key_passphrase_secret") || priv_key_passphrase == "",
+      "private_key_passphrase_secret" => attrs["private_key_passphrase_secret"] || "",
       "token" => attrs["token"] || "",
       "region" => attrs["region"] || "us-east-1",
       "workgroup" => attrs["workgroup"] || "",
       "output_location" => attrs["output_location"] || "",
       "account" => attrs["account"] || "",
       "schema" => attrs["schema"] || "",
+      "warehouse" => attrs["warehouse"] || "",
       "instance" => attrs["instance"] || ""
     }
 
@@ -138,9 +152,7 @@ defmodule KinoDB.ConnectionCell do
               ~w|access_key_id secret_access_key token region workgroup output_location database|
 
         "snowflake" ->
-          if fields["use_password_secret"],
-            do: ~w|database schema account username password_secret|,
-            else: ~w|database schema account username password|
+          snowflake_fields(fields)
 
         "sqlserver" ->
           if fields["use_password_secret"],
@@ -161,6 +173,33 @@ defmodule KinoDB.ConnectionCell do
       end
 
     Map.take(fields, @default_keys ++ connection_keys)
+  end
+
+  @default_snowflake_keys ~w|account username database schema warehouse auth_type|
+  defp snowflake_fields(fields),
+    do: snowflake_fields(fields["auth_type"], fields, @default_snowflake_keys)
+
+  defp snowflake_fields("auth_jwt", fields, keys) do
+    pk_keys =
+      if fields["use_private_key_secret"],
+        do: ~w|private_key_secret use_encrypted_private_key|,
+        else: ~w|private_key use_encrypted_private_key|
+
+    phrase_keys =
+      if fields["use_encrypted_private_key"] do
+        if fields["use_private_key_passphrase_secret"],
+          do: ~w|private_key_passphrase_secret|,
+          else: ~w|private_key_passphrase|
+      else
+        []
+      end
+
+    keys ++ pk_keys ++ phrase_keys
+  end
+
+  defp snowflake_fields(_, fields, keys) do
+    keys ++
+      if fields["use_password_secret"], do: ~w|password_secret|, else: ~w|password|
   end
 
   @impl true
@@ -186,10 +225,7 @@ defmodule KinoDB.ConnectionCell do
               )
 
         "snowflake" ->
-          if(Map.has_key?(attrs, "password_secret"),
-            do: ~w|account username password_secret|,
-            else: ~w|account username password|
-          )
+          snowflake_source_required_keys(attrs)
 
         "sqlserver" ->
           ~w|hostname port|
@@ -213,6 +249,20 @@ defmodule KinoDB.ConnectionCell do
     else
       ""
     end
+  end
+
+  defp snowflake_source_required_keys(attrs),
+    do: snowflake_source_required_keys(attrs["auth_type"], attrs, ~w|account username auth_type|)
+
+  defp snowflake_source_required_keys("auth_jwt", attrs, keys) do
+    keys ++
+      if Map.has_key?(attrs, "private_key_secret"),
+        do: ~w|private_key_secret|,
+        else: ~w|private_key|
+  end
+
+  defp snowflake_source_required_keys(_, attrs, keys) do
+    keys ++ if Map.has_key?(attrs, "password_secret"), do: ~w|password_secret|, else: ~w|password|
   end
 
   defp all_fields_filled?(attrs, keys) do
@@ -243,10 +293,15 @@ defmodule KinoDB.ConnectionCell do
   defp to_quoted(%{"type" => "snowflake"} = attrs) do
     var = quoted_var(attrs["variable"])
 
+    snowflake_opts =
+      attrs
+      |> trim_opts()
+      |> Map.new()
+      |> snowflake_options()
+
     quote do
       :ok = Adbc.download_driver!(:snowflake)
-      uri = unquote(build_snowflake_uri(attrs))
-      {:ok, db} = Kino.start_child({Adbc.Database, driver: :snowflake, uri: uri})
+      {:ok, db} = Kino.start_child({Adbc.Database, unquote(snowflake_opts)})
       {:ok, unquote(var)} = Kino.start_child({Adbc.Connection, database: db})
     end
   end
@@ -361,6 +416,64 @@ defmodule KinoDB.ConnectionCell do
     quote do
       System.fetch_env!(unquote("LB_#{secret}"))
     end
+  end
+
+  defp quoted_private_key(%{"private_key" => pk}), do: pk
+
+  defp quoted_private_key(%{"private_key_secret" => ""}), do: ""
+
+  defp quoted_private_key(%{"private_key_secret" => secret}) do
+    quote do
+      System.fetch_env!(unquote("LB_#{secret}"))
+    end
+  end
+
+  defp quoted_private_key_passphrase(%{"private_key_passphrase" => phrase}), do: phrase
+
+  defp quoted_private_key_passphrase(%{"private_key_passphrase_secret" => ""}), do: ""
+
+  defp quoted_private_key_passphrase(%{"private_key_passphrase_secret" => secret}) do
+    quote do
+      System.fetch_env!(unquote("LB_#{secret}"))
+    end
+  end
+
+  defp snowflake_options(attrs) do
+    shared_opts =
+      [
+        driver: :snowflake,
+        username: attrs["username"],
+        "adbc.snowflake.sql.account": attrs["account"],
+        "adbc.snowflake.sql.db": attrs["database"],
+        "adbc.snowflake.sql.schema": attrs["schema"],
+        "adbc.snowflake.sql.warehouse": attrs["warehouse"]
+      ]
+
+    snowflake_auth_opts(attrs["auth_type"], attrs, shared_opts)
+  end
+
+  defp snowflake_auth_opts("auth_jwt", attrs, opts) do
+    opts ++
+      [
+        "adbc.snowflake.sql.auth_type": "auth_jwt",
+        "adbc.snowflake.sql.client_option.jwt_private_key_pkcs8_value": quoted_private_key(attrs)
+      ] ++
+      if attrs["use_encrypted_private_key"] do
+        [
+          "adbc.snowflake.sql.client_option.jwt_private_key_pkcs8_password":
+            quoted_private_key_passphrase(attrs)
+        ]
+      else
+        []
+      end
+  end
+
+  defp snowflake_auth_opts(_, attrs, opts) do
+    opts ++
+      [
+        "adbc.snowflake.sql.auth_type": "auth_snowflake",
+        password: quoted_pass(attrs)
+      ]
   end
 
   defp shared_options(attrs) do
@@ -586,27 +699,4 @@ defmodule KinoDB.ConnectionCell do
          do: true,
          else: (_ -> false)
   end
-
-  defp build_snowflake_uri(attrs), do: build_snowflake_uri(attrs, quoted_pass(attrs))
-
-  defp build_snowflake_uri(attrs, password) when is_binary(password) do
-    "#{attrs["username"]}:#{password}@#{attrs["account"]}"
-    |> build_database_and_schema(attrs)
-  end
-
-  defp build_snowflake_uri(%{"username" => username, "account" => account} = attrs, password) do
-    rest = build_database_and_schema("@#{account}", attrs)
-
-    quote do
-      unquote("#{username}:") <> unquote(password) <> unquote(rest)
-    end
-  end
-
-  defp build_database_and_schema(uri, %{"database" => ""}), do: uri
-
-  defp build_database_and_schema(uri, %{"database" => database, "schema" => ""}),
-    do: "#{uri}/#{database}"
-
-  defp build_database_and_schema(uri, %{"database" => database, "schema" => schema}),
-    do: "#{uri}/#{database}/#{schema}"
 end
