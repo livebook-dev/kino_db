@@ -693,6 +693,8 @@ defmodule KinoDB.ConnectionCell do
 
   defp help_box(_ctx), do: nil
 
+  @compile {:no_warn_undefined, {Mint.HTTP, :connect, 3}, {Mint.HTTP, :set_mode, 2}}
+
   defp running_on_google_metadata? do
     with {:ok, conn} <- Mint.HTTP.connect(:http, "metadata.google.internal", 80),
          {:ok, _} <- Mint.HTTP.set_mode(conn, :passive),
