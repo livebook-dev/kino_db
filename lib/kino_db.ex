@@ -4,10 +4,11 @@ results = [
   Exqlite.Result,
   ReqBigQuery.Result,
   ReqAthena.Result,
-  Tds.Result
+  Tds.Result,
+  Adbc.Result
 ]
 
-for mod <- results do
+for mod <- results, Code.ensure_loaded?(mod) do
   defimpl Kino.Render, for: mod do
     def to_livebook(result) do
       result

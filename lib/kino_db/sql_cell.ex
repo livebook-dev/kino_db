@@ -24,7 +24,6 @@ defmodule KinoDB.SQLCell do
         query: query,
         timeout: attrs["timeout"],
         cache_query: Map.get(attrs, "cache_query", true),
-        data_frame_alias: Explorer.DataFrame,
         missing_dep: missing_dep(connection)
       )
 
@@ -39,7 +38,6 @@ defmodule KinoDB.SQLCell do
       result_variable: ctx.assigns.result_variable,
       timeout: ctx.assigns.timeout,
       cache_query: ctx.assigns.cache_query,
-      data_frame_alias: ctx.assigns.data_frame_alias,
       missing_dep: ctx.assigns.missing_dep
     }
 
@@ -102,20 +100,18 @@ defmodule KinoDB.SQLCell do
   end
 
   @impl true
-  def scan_binding(pid, binding, env) do
+  def scan_binding(pid, binding, _env) do
     connections =
       for {key, value} <- binding,
           is_atom(key),
           type = connection_type(value),
           do: %{variable: Atom.to_string(key), type: type}
 
-    data_frame_alias = data_frame_alias(env)
-
-    send(pid, {:connections, connections, data_frame_alias})
+    send(pid, {:connections, connections})
   end
 
   @impl true
-  def handle_info({:connections, connections, data_frame_alias}, ctx) do
+  def handle_info({:connections, connections}, ctx) do
     connection = search_connection(connections, ctx.assigns.connection)
     missing_dep = missing_dep(connection)
 
@@ -135,8 +131,7 @@ defmodule KinoDB.SQLCell do
     {:noreply,
      assign(ctx,
        connections: connections,
-       connection: connection,
-       data_frame_alias: data_frame_alias
+       connection: connection
      )}
   end
 
@@ -192,8 +187,7 @@ defmodule KinoDB.SQLCell do
       "result_variable" => ctx.assigns.result_variable,
       "query" => ctx.assigns.query,
       "timeout" => ctx.assigns.timeout,
-      "cache_query" => ctx.assigns.cache_query,
-      "data_frame_alias" => ctx.assigns.data_frame_alias
+      "cache_query" => ctx.assigns.cache_query
     }
   end
 
@@ -221,15 +215,15 @@ defmodule KinoDB.SQLCell do
 
   # Explorer-based
   defp to_quoted(%{"connection" => %{"type" => "snowflake"}} = attrs) do
-    to_quoted_explorer(attrs, fn n -> "?#{n}" end)
+    to_quoted_adbc(attrs, fn n -> "?#{n}" end)
   end
 
   defp to_quoted(%{"connection" => %{"type" => "duckdb"}} = attrs) do
-    to_quoted_explorer(attrs, fn n -> "?#{n}" end)
+    to_quoted_adbc(attrs, fn n -> "?#{n}" end)
   end
 
   defp to_quoted(%{"connection" => %{"type" => "bigquery"}} = attrs) do
-    to_quoted_explorer(attrs, fn _n -> "?" end)
+    to_quoted_adbc(attrs, fn _n -> "?" end)
   end
 
   # Req-based
@@ -270,13 +264,12 @@ defmodule KinoDB.SQLCell do
     end
   end
 
-  defp to_quoted_explorer(attrs, next) do
+  defp to_quoted_adbc(attrs, next) do
     {query, params} = parameterize(attrs["query"], attrs["connection"]["type"], next)
-    data_frame_alias = attrs["data_frame_alias"]
 
     quote do
       unquote(quoted_var(attrs["result_variable"])) =
-        unquote(data_frame_alias).from_query!(
+        Adbc.Connection.query!(
           unquote(quoted_var(attrs["connection"]["variable"])),
           unquote(quoted_query(query)),
           unquote(params)
@@ -287,15 +280,18 @@ defmodule KinoDB.SQLCell do
   defp to_quoted_req_query(attrs, quoted_module, next) do
     {query, params} = parameterize(attrs["query"], attrs["connection"]["type"], next)
     opts_args = query_opts_args(attrs)
+    var = quoted_var(attrs["result_variable"])
 
     quote do
-      unquote(quoted_var(attrs["result_variable"])) =
+      unquote(var) =
         unquote(quoted_module).query!(
           unquote(quoted_var(attrs["connection"]["variable"])),
           unquote(quoted_query(query)),
           unquote(params),
           unquote_splicing(opts_args)
         ).body
+
+      Kino.DataTable.new(unquote(var))
     end
   end
 
@@ -393,19 +389,6 @@ defmodule KinoDB.SQLCell do
 
   defp quote_param(_type, inner, _sql_param) do
     Code.string_to_quoted(inner)
-  end
-
-  defp data_frame_alias(%Macro.Env{aliases: aliases}) do
-    case List.keyfind(aliases, Explorer.DataFrame, 1) do
-      {data_frame_alias, _} -> data_frame_alias
-      nil -> Explorer.DataFrame
-    end
-  end
-
-  defp missing_dep(%{type: adbc}) when adbc in ~w[snowflake duckdb bigquery] do
-    unless Code.ensure_loaded?(Explorer) do
-      ~s|{:explorer, "~> 0.10"}|
-    end
   end
 
   defp missing_dep(_), do: nil

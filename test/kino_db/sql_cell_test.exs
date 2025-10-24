@@ -112,19 +112,21 @@ defmodule KinoDB.SQLCellTest do
              """
 
       assert SQLCell.to_source(put_in(attrs["connection"]["type"], "bigquery")) == """
-             result = Explorer.DataFrame.from_query!(conn, ~S"SELECT id FROM users", [])\
+             result = Adbc.Connection.query!(conn, ~S"SELECT id FROM users", [])\
              """
 
       assert SQLCell.to_source(put_in(attrs["connection"]["type"], "athena")) == """
-             result = ReqAthena.query!(conn, ~S"SELECT id FROM users", [], format: :explorer).body\
+             result = ReqAthena.query!(conn, ~S"SELECT id FROM users", [], format: :explorer).body
+             Kino.DataTable.new(result)\
              """
 
       assert SQLCell.to_source(put_in(attrs["connection"]["type"], "snowflake")) == """
-             result = Explorer.DataFrame.from_query!(conn, ~S"SELECT id FROM users", [])\
+             result = Adbc.Connection.query!(conn, ~S"SELECT id FROM users", [])\
              """
 
       assert SQLCell.to_source(put_in(attrs["connection"]["type"], "clickhouse")) == """
-             result = ReqCH.query!(conn, ~S"SELECT id FROM users", [], format: :explorer).body\
+             result = ReqCH.query!(conn, ~S"SELECT id FROM users", [], format: :explorer).body
+             Kino.DataTable.new(result)\
              """
 
       assert SQLCell.to_source(put_in(attrs["connection"]["type"], "sqlserver")) == """
@@ -180,7 +182,7 @@ defmodule KinoDB.SQLCellTest do
 
       assert SQLCell.to_source(put_in(attrs["connection"]["type"], "bigquery")) == ~s'''
              result =
-               Explorer.DataFrame.from_query!(
+               Adbc.Connection.query!(
                  conn,
                  ~S"""
                  SELECT id FROM users
@@ -200,12 +202,14 @@ defmodule KinoDB.SQLCellTest do
                  """,
                  [],
                  format: :explorer
-               ).body\
+               ).body
+
+             Kino.DataTable.new(result)\
              '''
 
       assert SQLCell.to_source(put_in(attrs["connection"]["type"], "snowflake")) == ~s'''
              result =
-               Explorer.DataFrame.from_query!(
+               Adbc.Connection.query!(
                  conn,
                  ~S"""
                  SELECT id FROM users
@@ -225,7 +229,9 @@ defmodule KinoDB.SQLCellTest do
                  """,
                  [],
                  format: :explorer
-               ).body\
+               ).body
+
+             Kino.DataTable.new(result)\
              '''
 
       assert SQLCell.to_source(put_in(attrs["connection"]["type"], "sqlserver")) == ~s'''
@@ -277,11 +283,10 @@ defmodule KinoDB.SQLCellTest do
 
       assert SQLCell.to_source(put_in(attrs["connection"]["type"], "bigquery")) == ~s'''
              result =
-               Explorer.DataFrame.from_query!(
-                 conn,
-                 ~S"SELECT id FROM users WHERE id ? AND name LIKE ?",
-                 [user_id, search <> \"%\"]
-               )\
+               Adbc.Connection.query!(conn, ~S"SELECT id FROM users WHERE id ? AND name LIKE ?", [
+                 user_id,
+                 search <> \"%\"
+               ])\
              '''
 
       assert SQLCell.to_source(put_in(attrs["connection"]["type"], "athena")) == ~s'''
@@ -291,16 +296,17 @@ defmodule KinoDB.SQLCellTest do
                  ~S"SELECT id FROM users WHERE id ? AND name LIKE ?",
                  [user_id, search <> "%"],
                  format: :explorer
-               ).body\
+               ).body
+
+             Kino.DataTable.new(result)\
              '''
 
       assert SQLCell.to_source(put_in(attrs["connection"]["type"], "snowflake")) == ~s'''
              result =
-               Explorer.DataFrame.from_query!(
-                 conn,
-                 ~S"SELECT id FROM users WHERE id ?1 AND name LIKE ?2",
-                 [user_id, search <> \"%\"]
-               )\
+               Adbc.Connection.query!(conn, ~S"SELECT id FROM users WHERE id ?1 AND name LIKE ?2", [
+                 user_id,
+                 search <> \"%\"
+               ])\
              '''
 
       assert SQLCell.to_source(put_in(attrs["connection"]["type"], "clickhouse")) == ~s'''
@@ -310,7 +316,9 @@ defmodule KinoDB.SQLCellTest do
                  ~S"SELECT id FROM users WHERE id {user_id:String} AND name LIKE {param_2:String}",
                  [{"user_id", user_id}, {"param_2", search <> \"%\"}],
                  format: :explorer
-               ).body\
+               ).body
+
+             Kino.DataTable.new(result)\
              '''
 
       assert SQLCell.to_source(put_in(attrs["connection"]["type"], "sqlserver")) == ~s'''
@@ -377,7 +385,7 @@ defmodule KinoDB.SQLCellTest do
 
       assert SQLCell.to_source(put_in(attrs["connection"]["type"], "bigquery")) == ~s'''
              result =
-               Explorer.DataFrame.from_query!(
+               Adbc.Connection.query!(
                  conn,
                  ~S"""
                  SELECT id from users
@@ -399,12 +407,14 @@ defmodule KinoDB.SQLCellTest do
                  """,
                  [user_id3],
                  format: :explorer
-               ).body\
+               ).body
+
+             Kino.DataTable.new(result)\
              '''
 
       assert SQLCell.to_source(put_in(attrs["connection"]["type"], "snowflake")) == ~s'''
              result =
-               Explorer.DataFrame.from_query!(
+               Adbc.Connection.query!(
                  conn,
                  ~S"""
                  SELECT id from users
@@ -426,7 +436,9 @@ defmodule KinoDB.SQLCellTest do
                  """,
                  [{"user_id3", user_id3}],
                  format: :explorer
-               ).body\
+               ).body
+
+             Kino.DataTable.new(result)\
              '''
 
       assert SQLCell.to_source(put_in(attrs["connection"]["type"], "sqlserver")) == ~s'''
@@ -466,19 +478,21 @@ defmodule KinoDB.SQLCellTest do
              """
 
       assert SQLCell.to_source(put_in(attrs["connection"]["type"], "bigquery")) == """
-             result = Explorer.DataFrame.from_query!(conn, ~S"SELECT id FROM users", [])\
+             result = Adbc.Connection.query!(conn, ~S"SELECT id FROM users", [])\
              """
 
       assert SQLCell.to_source(put_in(attrs["connection"]["type"], "athena")) == """
-             result = ReqAthena.query!(conn, ~S"SELECT id FROM users", [], format: :explorer).body\
+             result = ReqAthena.query!(conn, ~S"SELECT id FROM users", [], format: :explorer).body
+             Kino.DataTable.new(result)\
              """
 
       assert SQLCell.to_source(put_in(attrs["connection"]["type"], "snowflake")) == """
-             result = Explorer.DataFrame.from_query!(conn, ~S"SELECT id FROM users", [])\
+             result = Adbc.Connection.query!(conn, ~S"SELECT id FROM users", [])\
              """
 
       assert SQLCell.to_source(put_in(attrs["connection"]["type"], "clickhouse")) == """
-             result = ReqCH.query!(conn, ~S"SELECT id FROM users", [], format: :explorer).body\
+             result = ReqCH.query!(conn, ~S"SELECT id FROM users", [], format: :explorer).body
+             Kino.DataTable.new(result)\
              """
 
       assert SQLCell.to_source(put_in(attrs["connection"]["type"], "sqlserver")) == """
@@ -491,8 +505,7 @@ defmodule KinoDB.SQLCellTest do
         "connection" => %{"variable" => "conn", "type" => "postgres"},
         "result_variable" => "result",
         "cache_query" => true,
-        "query" => "SELECT id FROM users",
-        "data_frame_alias" => DF
+        "query" => "SELECT id FROM users"
       }
 
       assert SQLCell.to_source(attrs) == """
@@ -508,21 +521,23 @@ defmodule KinoDB.SQLCellTest do
              """
 
       assert SQLCell.to_source(put_in(attrs["connection"]["type"], "snowflake")) == """
-             result = DF.from_query!(conn, ~S"SELECT id FROM users", [])\
+             result = Adbc.Connection.query!(conn, ~S"SELECT id FROM users", [])\
              """
 
       assert SQLCell.to_source(put_in(attrs["connection"]["type"], "clickhouse")) == """
-             result = ReqCH.query!(conn, ~S"SELECT id FROM users", [], format: :explorer).body\
+             result = ReqCH.query!(conn, ~S"SELECT id FROM users", [], format: :explorer).body
+             Kino.DataTable.new(result)\
              """
 
       assert SQLCell.to_source(put_in(attrs["connection"]["type"], "bigquery")) == """
-             result = DF.from_query!(conn, ~S"SELECT id FROM users", [])\
+             result = Adbc.Connection.query!(conn, ~S"SELECT id FROM users", [])\
              """
 
       athena = put_in(attrs["connection"]["type"], "athena")
 
       assert SQLCell.to_source(put_in(athena["cache_query"], true)) == """
-             result = ReqAthena.query!(conn, ~S"SELECT id FROM users", [], format: :explorer).body\
+             result = ReqAthena.query!(conn, ~S"SELECT id FROM users", [], format: :explorer).body
+             Kino.DataTable.new(result)\
              """
 
       assert SQLCell.to_source(put_in(athena["cache_query"], false)) == """
@@ -530,7 +545,9 @@ defmodule KinoDB.SQLCellTest do
                ReqAthena.query!(conn, ~S"SELECT id FROM users", [],
                  format: :explorer,
                  cache_query: false
-               ).body\
+               ).body
+
+             Kino.DataTable.new(result)\
              """
 
       assert SQLCell.to_source(put_in(attrs["connection"]["type"], "sqlserver")) == """
