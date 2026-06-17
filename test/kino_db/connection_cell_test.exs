@@ -162,42 +162,6 @@ defmodule KinoDB.ConnectionCellTest do
              {:ok, db} = Kino.start_child({Exqlite, opts})\
              '''
 
-      assert ConnectionCell.to_source(put_in(@attrs["type"], "athena")) == ~s'''
-             db =
-               ReqAthena.new(
-                 access_key_id: "id",
-                 database: "default",
-                 output_location: "s3://my-bucket",
-                 region: "region",
-                 secret_access_key: "secret",
-                 token: "token",
-                 workgroup: "primary",
-                 http_errors: :raise
-               )
-
-             :ok\
-             '''
-
-      attrs =
-        Map.delete(@attrs, "secret_access_key")
-        |> Map.merge(%{"type" => "athena", "secret_access_key_secret" => "ATHENA_KEY"})
-
-      assert ConnectionCell.to_source(attrs) == ~s'''
-             db =
-               ReqAthena.new(
-                 access_key_id: "id",
-                 database: "default",
-                 output_location: "s3://my-bucket",
-                 region: "region",
-                 secret_access_key: System.fetch_env!("LB_ATHENA_KEY"),
-                 token: "token",
-                 workgroup: "primary",
-                 http_errors: :raise
-               )
-
-             :ok\
-             '''
-
       attrs =
         Map.delete(@attrs, "password_secret")
         |> Map.merge(%{"variable" => "conn", "auth_type" => "auth_snowflake"})
@@ -302,15 +266,8 @@ defmodule KinoDB.ConnectionCellTest do
       assert ConnectionCell.to_source(put_in(@empty_required_fields["type"], "mysql")) == ""
       assert ConnectionCell.to_source(put_in(@empty_required_fields["type"], "sqlite")) == ""
       assert ConnectionCell.to_source(put_in(@empty_required_fields["type"], "bigquery")) == ""
-      assert ConnectionCell.to_source(put_in(@empty_required_fields["type"], "athena")) == ""
       assert ConnectionCell.to_source(put_in(@empty_required_fields["type"], "snowflake")) == ""
       assert ConnectionCell.to_source(put_in(@empty_required_fields["type"], "clickhouse")) == ""
-    end
-
-    test "generates empty source code when all conditional fields are missing" do
-      attrs = Map.merge(@attrs, %{"type" => "athena", "workgroup" => "", "output_location" => ""})
-
-      assert ConnectionCell.to_source(attrs) == ""
     end
   end
 
@@ -380,56 +337,6 @@ defmodule KinoDB.ConnectionCellTest do
       ]
 
       {:ok, conn} = Kino.start_child({Postgrex, opts})\
-      """
-    )
-  end
-
-  test "athena secret key from secrets" do
-    {kino, _source} =
-      start_smart_cell!(ConnectionCell, %{
-        "variable" => "conn",
-        "type" => "athena",
-        "database" => "default",
-        "access_key_id" => "id",
-        "secret_access_key" => "secret_key",
-        "token" => "token",
-        "region" => "region",
-        "output_location" => "s3://my-bucket",
-        "workgroup" => "primary"
-      })
-
-    push_event(kino, "update_field", %{"field" => "use_secret_access_key_secret", "value" => true})
-
-    assert_broadcast_event(kino, "update", %{
-      "fields" => %{"use_secret_access_key_secret" => true}
-    })
-
-    push_event(kino, "update_field", %{
-      "field" => "secret_access_key_secret",
-      "value" => "ATHENA_KEY"
-    })
-
-    assert_broadcast_event(kino, "update", %{
-      "fields" => %{"secret_access_key_secret" => "ATHENA_KEY"}
-    })
-
-    assert_smart_cell_update(
-      kino,
-      %{"secret_access_key_secret" => "ATHENA_KEY"},
-      """
-      conn =
-        ReqAthena.new(
-          access_key_id: "id",
-          database: "default",
-          output_location: "s3://my-bucket",
-          region: "region",
-          secret_access_key: System.fetch_env!("LB_ATHENA_KEY"),
-          token: "token",
-          workgroup: "primary",
-          http_errors: :raise
-        )
-
-      :ok\
       """
     )
   end

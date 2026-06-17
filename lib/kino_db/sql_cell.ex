@@ -160,7 +160,6 @@ defmodule KinoDB.SQLCell do
 
   defp connection_type(connection) when is_struct(connection, Req.Request) do
     cond do
-      Keyword.has_key?(connection.request_steps, :athena_run) -> "athena"
       Keyword.has_key?(connection.request_steps, :clickhouse_run) -> "clickhouse"
       true -> nil
     end
@@ -227,10 +226,6 @@ defmodule KinoDB.SQLCell do
   end
 
   # Req-based
-  defp to_quoted(%{"connection" => %{"type" => "athena"}} = attrs) do
-    to_quoted_req_query(attrs, quote(do: ReqAthena), fn _n -> "?" end)
-  end
-
   defp to_quoted(%{"connection" => %{"type" => "clickhouse"}} = attrs) do
     to_quoted_req_query(attrs, quote(do: ReqCH), fn n, inner ->
       name =
@@ -311,10 +306,6 @@ defmodule KinoDB.SQLCell do
   defp query_opts_args(%{"connection" => %{"type" => type}, "timeout" => timeout})
        when timeout != nil and type in @connection_types_with_timeout,
        do: [[timeout: timeout * 1000]]
-
-  defp query_opts_args(%{"connection" => %{"type" => "athena"}} = attrs) do
-    [[format: :explorer] ++ if(attrs["cache_query"], do: [], else: [cache_query: false])]
-  end
 
   defp query_opts_args(%{"connection" => %{"type" => "clickhouse"}}),
     do: [[format: :explorer]]

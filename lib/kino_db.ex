@@ -3,7 +3,6 @@ results = [
   MyXQL.Result,
   Exqlite.Result,
   ReqBigQuery.Result,
-  ReqAthena.Result,
   Tds.Result,
   Adbc.Result
 ]
