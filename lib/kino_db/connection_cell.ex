@@ -359,16 +359,6 @@ defmodule KinoDB.ConnectionCell do
     end
   end
 
-  defp quoted_access_key(%{"secret_access_key" => password}), do: password
-
-  defp quoted_access_key(%{"secret_access_key_secret" => ""}), do: ""
-
-  defp quoted_access_key(%{"secret_access_key_secret" => secret}) do
-    quote do
-      System.fetch_env!(unquote("LB_#{secret}"))
-    end
-  end
-
   defp quoted_private_key(%{"private_key" => pk}), do: pk
 
   defp quoted_private_key(%{"private_key_secret" => ""}), do: ""
