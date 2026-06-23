@@ -36,7 +36,6 @@ defmodule KinoDB.MixProject do
       {:tds, "~> 2.3.4 or ~> 2.4", optional: true},
 
       # Those dependecies are new, so we use stricter versions
-      {:req_athena, "~> 0.3.0", optional: true},
       {:req_ch, "~> 0.1.0", optional: true},
 
       # Dev only

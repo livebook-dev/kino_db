@@ -115,11 +115,6 @@ defmodule KinoDB.SQLCellTest do
              result = Adbc.Connection.query!(conn, ~S"SELECT id FROM users", [])\
              """
 
-      assert SQLCell.to_source(put_in(attrs["connection"]["type"], "athena")) == """
-             result = ReqAthena.query!(conn, ~S"SELECT id FROM users", [], format: :explorer).body
-             Kino.DataTable.new(result)\
-             """
-
       assert SQLCell.to_source(put_in(attrs["connection"]["type"], "snowflake")) == """
              result = Adbc.Connection.query!(conn, ~S"SELECT id FROM users", [])\
              """
@@ -190,21 +185,6 @@ defmodule KinoDB.SQLCellTest do
                  """,
                  []
                )\
-             '''
-
-      assert SQLCell.to_source(put_in(attrs["connection"]["type"], "athena")) == ~s'''
-             result =
-               ReqAthena.query!(
-                 conn,
-                 ~S"""
-                 SELECT id FROM users
-                 WHERE last_name = 'Sherlock'
-                 """,
-                 [],
-                 format: :explorer
-               ).body
-
-             Kino.DataTable.new(result)\
              '''
 
       assert SQLCell.to_source(put_in(attrs["connection"]["type"], "snowflake")) == ~s'''
@@ -287,18 +267,6 @@ defmodule KinoDB.SQLCellTest do
                  user_id,
                  search <> \"%\"
                ])\
-             '''
-
-      assert SQLCell.to_source(put_in(attrs["connection"]["type"], "athena")) == ~s'''
-             result =
-               ReqAthena.query!(
-                 conn,
-                 ~S"SELECT id FROM users WHERE id ? AND name LIKE ?",
-                 [user_id, search <> "%"],
-                 format: :explorer
-               ).body
-
-             Kino.DataTable.new(result)\
              '''
 
       assert SQLCell.to_source(put_in(attrs["connection"]["type"], "snowflake")) == ~s'''
@@ -396,22 +364,6 @@ defmodule KinoDB.SQLCellTest do
                )\
              '''
 
-      assert SQLCell.to_source(put_in(attrs["connection"]["type"], "athena")) == ~s'''
-             result =
-               ReqAthena.query!(
-                 conn,
-                 ~S"""
-                 SELECT id from users
-                 -- WHERE id = {{user_id1}}
-                 /* WHERE id = {{user_id2}} */ WHERE id = ?
-                 """,
-                 [user_id3],
-                 format: :explorer
-               ).body
-
-             Kino.DataTable.new(result)\
-             '''
-
       assert SQLCell.to_source(put_in(attrs["connection"]["type"], "snowflake")) == ~s'''
              result =
                Adbc.Connection.query!(
@@ -481,11 +433,6 @@ defmodule KinoDB.SQLCellTest do
              result = Adbc.Connection.query!(conn, ~S"SELECT id FROM users", [])\
              """
 
-      assert SQLCell.to_source(put_in(attrs["connection"]["type"], "athena")) == """
-             result = ReqAthena.query!(conn, ~S"SELECT id FROM users", [], format: :explorer).body
-             Kino.DataTable.new(result)\
-             """
-
       assert SQLCell.to_source(put_in(attrs["connection"]["type"], "snowflake")) == """
              result = Adbc.Connection.query!(conn, ~S"SELECT id FROM users", [])\
              """
@@ -533,23 +480,6 @@ defmodule KinoDB.SQLCellTest do
              result = Adbc.Connection.query!(conn, ~S"SELECT id FROM users", [])\
              """
 
-      athena = put_in(attrs["connection"]["type"], "athena")
-
-      assert SQLCell.to_source(put_in(athena["cache_query"], true)) == """
-             result = ReqAthena.query!(conn, ~S"SELECT id FROM users", [], format: :explorer).body
-             Kino.DataTable.new(result)\
-             """
-
-      assert SQLCell.to_source(put_in(athena["cache_query"], false)) == """
-             result =
-               ReqAthena.query!(conn, ~S"SELECT id FROM users", [],
-                 format: :explorer,
-                 cache_query: false
-               ).body
-
-             Kino.DataTable.new(result)\
-             """
-
       assert SQLCell.to_source(put_in(attrs["connection"]["type"], "sqlserver")) == """
              result = Tds.query!(conn, ~S"SELECT id FROM users", [])\
              """
@@ -569,20 +499,6 @@ defmodule KinoDB.SQLCellTest do
              result =
                Postgrex.query!(conn, ~S"SELECT id FROM users WHERE last_name = '\#{user_id}'", [])\
              """
-
-      athena = put_in(attrs["query"], "SELECT id FROM users\nWHERE last_name = '\#{user_id}'")
-
-      assert SQLCell.to_source(put_in(athena["cache_query"], true)) == ~s'''
-             result =
-               Postgrex.query!(
-                 conn,
-                 ~S"""
-                 SELECT id FROM users
-                 WHERE last_name = '\#{user_id}'
-                 """,
-                 []
-               )\
-             '''
     end
   end
 
