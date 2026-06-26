@@ -276,8 +276,6 @@ defmodule KinoDB.SQLCell do
           unquote(params),
           unquote_splicing(opts_args)
         ).body
-
-      Kino.DataTable.new(unquote(var))
     end
   end
 
@@ -299,7 +297,7 @@ defmodule KinoDB.SQLCell do
        do: [[timeout: timeout * 1000]]
 
   defp query_opts_args(%{"connection" => %{"type" => "clickhouse"}}),
-    do: [[format: :explorer]]
+    do: [[format: :adbc]]
 
   defp query_opts_args(_attrs), do: []
 
