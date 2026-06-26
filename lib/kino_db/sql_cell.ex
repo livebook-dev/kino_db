@@ -23,7 +23,6 @@ defmodule KinoDB.SQLCell do
         result_variable: Kino.SmartCell.prefixed_var_name("result", attrs["result_variable"]),
         query: query,
         timeout: attrs["timeout"],
-        cache_query: Map.get(attrs, "cache_query", true),
         missing_dep: missing_dep(connection)
       )
 
@@ -37,7 +36,6 @@ defmodule KinoDB.SQLCell do
       connection: ctx.assigns.connection,
       result_variable: ctx.assigns.result_variable,
       timeout: ctx.assigns.timeout,
-      cache_query: ctx.assigns.cache_query,
       missing_dep: ctx.assigns.missing_dep
     }
 
@@ -90,12 +88,6 @@ defmodule KinoDB.SQLCell do
 
     ctx = assign(ctx, timeout: timeout)
     broadcast_event(ctx, "update_timeout", timeout)
-    {:noreply, ctx}
-  end
-
-  def handle_event("update_cache_query", cache_query?, ctx) do
-    ctx = assign(ctx, cache_query: cache_query?)
-    broadcast_event(ctx, "update_cache_query", cache_query?)
     {:noreply, ctx}
   end
 
@@ -185,8 +177,7 @@ defmodule KinoDB.SQLCell do
         end,
       "result_variable" => ctx.assigns.result_variable,
       "query" => ctx.assigns.query,
-      "timeout" => ctx.assigns.timeout,
-      "cache_query" => ctx.assigns.cache_query
+      "timeout" => ctx.assigns.timeout
     }
   end
 
@@ -212,7 +203,7 @@ defmodule KinoDB.SQLCell do
     to_quoted(attrs, quote(do: Tds), fn n -> "@#{n}" end)
   end
 
-  # Explorer-based
+  # ADBC-based
   defp to_quoted(%{"connection" => %{"type" => "snowflake"}} = attrs) do
     to_quoted_adbc(attrs, fn n -> "?#{n}" end)
   end

@@ -13,8 +13,7 @@ defmodule KinoDB.SQLCellTest do
         "connection" => %{"variable" => "db", "type" => "postgres"},
         "result_variable" => "ids_result",
         "timeout" => nil,
-        "query" => "SELECT id FROM users",
-        "data_frame_alias" => Explorer.DataFrame
+        "query" => "SELECT id FROM users"
       }
 
       {_kino, source} = start_smart_cell!(SQLCell, attrs)
@@ -93,10 +92,8 @@ defmodule KinoDB.SQLCellTest do
       attrs = %{
         "connection" => %{"variable" => "conn", "type" => "postgres"},
         "result_variable" => "result",
-        "cache_query" => true,
         "timeout" => nil,
-        "query" => "SELECT id FROM users",
-        "data_frame_alias" => Explorer.DataFrame
+        "query" => "SELECT id FROM users"
       }
 
       assert SQLCell.to_source(attrs) == """
@@ -133,10 +130,8 @@ defmodule KinoDB.SQLCellTest do
       attrs = %{
         "connection" => %{"variable" => "conn", "type" => "postgres"},
         "result_variable" => "result",
-        "cache_query" => true,
         "timeout" => nil,
-        "query" => "SELECT id FROM users\nWHERE last_name = 'Sherlock'",
-        "data_frame_alias" => Explorer.DataFrame
+        "query" => "SELECT id FROM users\nWHERE last_name = 'Sherlock'"
       }
 
       assert SQLCell.to_source(attrs) == ~s'''
@@ -231,10 +226,8 @@ defmodule KinoDB.SQLCellTest do
       attrs = %{
         "connection" => %{"variable" => "conn", "type" => "postgres"},
         "result_variable" => "result",
-        "cache_query" => true,
         "timeout" => nil,
-        "query" => ~s/SELECT id FROM users WHERE id {{user_id}} AND name LIKE {{search <> "%"}}/,
-        "data_frame_alias" => Explorer.DataFrame
+        "query" => ~s/SELECT id FROM users WHERE id {{user_id}} AND name LIKE {{search <> "%"}}/
       }
 
       assert SQLCell.to_source(attrs) == ~s'''
@@ -302,14 +295,12 @@ defmodule KinoDB.SQLCellTest do
       attrs = %{
         "connection" => %{"variable" => "conn", "type" => "postgres"},
         "result_variable" => "result",
-        "cache_query" => true,
         "timeout" => nil,
         "query" => """
         SELECT id from users
         -- WHERE id = {{user_id1}}
         /* WHERE id = {{user_id2}} */ WHERE id = {{user_id3}}\
-        """,
-        "data_frame_alias" => Explorer.DataFrame
+        """
       }
 
       assert SQLCell.to_source(attrs) == ~s'''
@@ -411,10 +402,8 @@ defmodule KinoDB.SQLCellTest do
       attrs = %{
         "connection" => %{"variable" => "conn", "type" => "postgres"},
         "result_variable" => "result",
-        "cache_query" => true,
         "timeout" => 30,
-        "query" => "SELECT id FROM users",
-        "data_frame_alias" => Explorer.DataFrame
+        "query" => "SELECT id FROM users"
       }
 
       assert SQLCell.to_source(attrs) == """
@@ -447,52 +436,12 @@ defmodule KinoDB.SQLCellTest do
              """
     end
 
-    test "passes cache_query option when supported" do
-      attrs = %{
-        "connection" => %{"variable" => "conn", "type" => "postgres"},
-        "result_variable" => "result",
-        "cache_query" => true,
-        "query" => "SELECT id FROM users"
-      }
-
-      assert SQLCell.to_source(attrs) == """
-             result = Postgrex.query!(conn, ~S"SELECT id FROM users", [])\
-             """
-
-      assert SQLCell.to_source(put_in(attrs["connection"]["type"], "mysql")) == """
-             result = MyXQL.query!(conn, ~S"SELECT id FROM users", [])\
-             """
-
-      assert SQLCell.to_source(put_in(attrs["connection"]["type"], "sqlite")) == """
-             result = Exqlite.query!(conn, ~S"SELECT id FROM users", [])\
-             """
-
-      assert SQLCell.to_source(put_in(attrs["connection"]["type"], "snowflake")) == """
-             result = Adbc.Connection.query!(conn, ~S"SELECT id FROM users", [])\
-             """
-
-      assert SQLCell.to_source(put_in(attrs["connection"]["type"], "clickhouse")) == """
-             result = ReqCH.query!(conn, ~S"SELECT id FROM users", [], format: :explorer).body
-             Kino.DataTable.new(result)\
-             """
-
-      assert SQLCell.to_source(put_in(attrs["connection"]["type"], "bigquery")) == """
-             result = Adbc.Connection.query!(conn, ~S"SELECT id FROM users", [])\
-             """
-
-      assert SQLCell.to_source(put_in(attrs["connection"]["type"], "sqlserver")) == """
-             result = Tds.query!(conn, ~S"SELECT id FROM users", [])\
-             """
-    end
-
     test "escapes interpolation" do
       attrs = %{
         "connection" => %{"variable" => "conn", "type" => "postgres"},
         "result_variable" => "result",
-        "cache_query" => true,
         "timeout" => nil,
-        "query" => "SELECT id FROM users WHERE last_name = '\#{user_id}'",
-        "data_frame_alias" => Explorer.DataFrame
+        "query" => "SELECT id FROM users WHERE last_name = '\#{user_id}'"
       }
 
       assert SQLCell.to_source(attrs) == """
