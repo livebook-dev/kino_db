@@ -593,8 +593,8 @@ defmodule KinoDB.ConnectionCell do
 
   defp missing_dep(%{"type" => "clickhouse"}) do
     missing_many_deps([
-      {ReqCH, ~s|{:req_ch, "~> 0.1"}|},
-      {Explorer, ~s|{:explorer, "~> 0.10"}|}
+      {ReqCH, ~s|{:req_ch, "~> 0.2"}|},
+      {Adbc, ~s|{:adbc, "~> 0.12"}|}
     ])
   end
 
