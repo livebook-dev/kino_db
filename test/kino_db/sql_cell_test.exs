@@ -201,7 +201,9 @@ defmodule KinoDB.SQLCellTest do
                  SELECT id FROM users
                  WHERE last_name = 'Sherlock'
                  """,
-                 [], format: :adbc).body\
+                 [],
+                 format: :adbc
+               ).body\
              '''
 
       assert SQLCell.to_source(put_in(attrs["connection"]["type"], "sqlserver")) == ~s'''
@@ -270,7 +272,9 @@ defmodule KinoDB.SQLCellTest do
                ReqCH.query!(
                  conn,
                  ~S"SELECT id FROM users WHERE id {user_id:String} AND name LIKE {param_2:String}",
-                 [{"user_id", user_id}, {"param_2", search <> \"%\"}], format: :adbc).body\
+                 [{"user_id", user_id}, {"param_2", search <> \"%\"}],
+                 format: :adbc
+               ).body\
              '''
 
       assert SQLCell.to_source(put_in(attrs["connection"]["type"], "sqlserver")) == ~s'''
@@ -368,7 +372,9 @@ defmodule KinoDB.SQLCellTest do
                  -- WHERE id = {{user_id1}}
                  /* WHERE id = {{user_id2}} */ WHERE id = {user_id3:String}
                  """,
-                 [{"user_id3", user_id3}], format: :adbc).body\
+                 [{"user_id3", user_id3}],
+                 format: :adbc
+               ).body\
              '''
 
       assert SQLCell.to_source(put_in(attrs["connection"]["type"], "sqlserver")) == ~s'''
