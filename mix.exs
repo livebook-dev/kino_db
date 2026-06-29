@@ -1,7 +1,7 @@
 defmodule KinoDB.MixProject do
   use Mix.Project
 
-  @version "0.4.0"
+  @version "0.5.0"
   @description "Databases integration with Livebook"
 
   def project do
@@ -28,7 +28,7 @@ defmodule KinoDB.MixProject do
     [
       {:kino, "~> 0.13"},
       {:table, "~> 0.1"},
-      {:adbc, "~> 0.8", optional: true},
+      {:adbc, "~> 0.12", optional: true},
       {:db_connection, "~> 2.4.2 or ~> 2.5", optional: true},
       {:exqlite, "~> 0.11", optional: true},
       {:myxql, "~> 0.7", optional: true},
@@ -36,7 +36,7 @@ defmodule KinoDB.MixProject do
       {:tds, "~> 2.3.4 or ~> 2.4", optional: true},
 
       # Those dependecies are new, so we use stricter versions
-      {:req_ch, "~> 0.1.0", optional: true},
+      {:req_ch, "~> 0.2.0", optional: true},
 
       # Dev only
       {:ex_doc, "~> 0.28", only: :dev, runtime: false}
